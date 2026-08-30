@@ -104,6 +104,23 @@ step(10);
 documentEvents.keyup[0]({ code: "ArrowRight", key: "ArrowRight" });
 assert(game.getState().playerBullets > 0, "Keyboard shooting failed");
 
+game.goToRoom(game.getState().roomKinds.indexOf("elite"));
+step(2);
+state = game.getState();
+assert(Object.keys(state.eliteAffixes).length >= 2, "Elite affix variety failed");
+assert(state.enemies.some(enemy => enemy.affix === "warded" && enemy.shield > 0), "Warded elite failed");
+
+game.goToRoom(6);
+for (let index = 0; index < 5; index += 1) game.giveItem("shield");
+step(100);
+assert(game.getState().summonedEnemies > 0, "Cultist summoning role failed");
+
+game.goToRoom(12);
+step(175);
+assert(game.getState().hazards > 0, "Bomber control hazard failed");
+
+game.start();
+step();
 for (const id of ["powder", "barrel", "split", "voidOrb", "boneBell", "hammer", "gear", "magnet", "goldCoin", "refreshToken", "luckyDie", "crownGear", "lens", "needle", "halo", "spellbook", "bloodKey", "moonSigil", "boots", "heart", "cloak", "candle", "shield", "titanSkull"]) game.giveItem(id);
 state = game.getState();
 assert(state.itemsFound === 24, "Not all items were granted");
@@ -114,6 +131,86 @@ const hpBeforeShield = state.hp;
 const armorBeforeShield = state.stats.armor;
 game.hurt(1);
 assert(game.getState().hp === hpBeforeShield && game.getState().stats.armor === armorBeforeShield - 1, "Shield failed");
+
+game.start();
+step();
+assert(game.getState().itemCatalogSize === 36, "Expanded item pool failed");
+game.giveItem("serratedCrown");
+game.giveItem("serratedCrown");
+documentEvents.keydown[0]({ code: "ArrowRight", key: "ArrowRight", repeat: false, preventDefault() {} });
+step(1);
+documentEvents.keyup[0]({ code: "ArrowRight", key: "ArrowRight" });
+assert(game.getState().stats.weapon === "cleaver" && game.getState().stats.weaponLevel === 2 && game.getState().slashes > 0, "Melee weapon evolution failed");
+
+game.start();
+step();
+game.giveItem("witchLantern");
+documentEvents.keydown[0]({ code: "ArrowRight", key: "ArrowRight", repeat: false, preventDefault() {} });
+step(1);
+documentEvents.keyup[0]({ code: "ArrowRight", key: "ArrowRight" });
+assert(game.getState().stats.weapon === "wisp" && game.getState().playerBullets >= 2, "Summon weapon core failed");
+
+game.start();
+step();
+game.giveItem("scatterHeart");
+game.giveItem("emberFlask");
+game.giveItem("frostRune");
+game.giveItem("venomCoin");
+game.giveItem("barbedHook");
+game.giveItem("stormCoil");
+documentEvents.keydown[0]({ code: "ArrowRight", key: "ArrowRight", repeat: false, preventDefault() {} });
+step(1);
+documentEvents.keyup[0]({ code: "ArrowRight", key: "ArrowRight" });
+state = game.getState();
+assert(state.stats.weapon === "scatter" && state.playerBullets >= 3, "Scatter weapon core failed");
+assert(Object.values(state.stats.statusChances).every(chance => chance > 0), "Status build upgrades failed");
+game.inflictStatus("freeze");
+assert(game.getState().enemies[0].statuses.freeze > 0, "Status application failed");
+
+game.start();
+step();
+game.goToRoom(2);
+game.collectPickups();
+step(2);
+assert(game.getState().routeChoice.join(",") === "safe,risk", "Route choice did not open after treasure");
+game.chooseRoute("safe");
+assert(game.getState().roomKinds[3] === "sanctuary" && game.getState().doorOpen, "Safe route failed");
+
+game.start();
+step();
+game.goToRoom(2);
+game.collectPickups();
+step(2);
+game.chooseRoute("risk");
+state = game.getState();
+assert(state.roomKinds[3] === "elite" && state.roomModifier === null && state.routeChoices === 1, "Risk route selection failed");
+game.exitRoom();
+step(3);
+state = game.getState();
+assert(state.roomType === "elite" && state.roomModifier === "cursed", "Risk route encounter failed");
+
+for (const bossRoom of [5, 11, 17]) {
+  game.start();
+  step();
+  for (let index = 0; index < 20; index += 1) game.giveItem("shield");
+  game.goToRoom(bossRoom);
+  step(2);
+  game.setBossHealthRatio(.6);
+  step(2);
+  assert(game.getState().bossStage === 2, `Boss ${bossRoom} did not enter stage 2`);
+  step(60);
+  game.setBossHealthRatio(.3);
+  step(2);
+  assert(game.getState().bossStage === 3, `Boss ${bossRoom} did not enter stage 3`);
+  if (bossRoom === 11) {
+    step(80);
+    assert(game.getState().arenaInset > 0, "Warden arena contraction failed");
+  }
+  if (bossRoom === 17) {
+    step(220);
+    assert(game.getState().bossWaves > 0, "Heart shockwave phase failed");
+  }
+}
 
 game.start();
 step();
@@ -133,19 +230,26 @@ state = game.getState();
 assert(state.outcome === "victory", "Campaign did not reach victory");
 assert(state.bossKills === 3, `Expected 3 boss kills, got ${state.bossKills}`);
 assert(state.itemsFound >= 5, `Expected at least 5 guaranteed item rewards, got ${state.itemsFound}`);
+assert(state.meta.bossDefeats >= 3 && state.meta.wins >= 1, "Meta progression was not recorded");
+
+game.selectWeapon("cleaver");
+game.start();
+step();
+assert(game.getState().stats.weapon === "cleaver", "Unlocked starting weapon selection failed");
 
 game.start();
 step();
 game.hurt(99);
 step();
 assert(game.getState().outcome === "defeat", "Death flow failed");
+assert(game.getState().runStats.damageTaken >= 99, "Run damage statistics failed");
 
 console.log(JSON.stringify({
   levels: 18,
   chapters: 3,
   bosses: 3,
   enemyTypes: 8,
-  items: 24,
+  items: 36,
   heroes: 4,
   buildSynergies: 8,
   activeSkills: "passed",
@@ -154,6 +258,15 @@ console.log(JSON.stringify({
   shops: 3,
   keyboardMovement: "passed",
   keyboardShooting: "passed",
+  eliteAffixes: "passed",
+  summonerRole: "passed",
+  controlHazards: "passed",
+  weaponCores: 3,
+  statusEffects: 5,
+  routeChoices: "passed",
+  threeStageBosses: "passed",
+  metaProgression: "passed",
+  runStatistics: "passed",
   itemEffects: "passed",
   completeCampaign: "passed",
   deathFlow: "passed"

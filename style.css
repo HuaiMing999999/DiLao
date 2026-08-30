@@ -125,6 +125,30 @@ h2 { font-size: clamp(44px, 8vw, 82px); }
 .hero-card em { color: #8f8377; font-size: 10px; font-style: normal; }
 .hero-card.selected { border-color: #f0bd62; background: linear-gradient(155deg, #51312f, #23171c); transform: translateY(-2px); box-shadow: 0 4px 0 #71382c, 0 10px 24px #0008, inset 0 1px #916153; }
 
+.weapon-select {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  max-width: 680px;
+  margin: 0 auto 14px;
+}
+
+.weapon-card {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-color: #594b45;
+  background: linear-gradient(#241e21, #151217);
+  color: #c8bba4;
+  box-shadow: inset 0 1px #3b3135, 0 4px 10px #0007;
+}
+
+.weapon-card b { color: #ead8b5; font-size: 12px; }
+.weapon-card em { color: #8e8175; font-size: 9px; font-style: normal; }
+.weapon-card.selected { border-color: #cba75e; background: linear-gradient(#49332c, #21191c); box-shadow: 0 3px 0 #68402d, inset 0 1px #76584a; }
+.weapon-card.locked { filter: grayscale(1); opacity: .45; cursor: not-allowed; }
+.meta-progress { margin: 13px 0 -8px; color: #c89f5c; font-size: 11px; font-weight: 800; letter-spacing: .05em; }
+
 .controls-card {
   display: flex;
   gap: 8px;
@@ -181,6 +205,8 @@ button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71382c; }
   .hero-select { grid-template-columns: repeat(2, 1fr); gap: 6px; }
   .hero-card { padding: 8px 5px; }
   .hero-card em { display: none; }
+  .weapon-select { grid-template-columns: repeat(2, 1fr); }
+  .weapon-card { padding: 6px 5px; }
   h1 { font-size: clamp(48px, 16vw, 78px); }
   .screen-panel { padding: 36px 14px 20px; border-radius: 18px; }
 }

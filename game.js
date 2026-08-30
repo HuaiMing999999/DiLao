@@ -26,6 +26,19 @@
     fortune: { name: "富矿", color: "#d9b455" },
     cursed: { name: "诅咒", color: "#9a78bd" }
   };
+  const eliteAffixes = {
+    warded: { name: "护盾", glyph: "◆", color: "#70c5dd" },
+    frenzied: { name: "狂怒", glyph: "✦", color: "#ee7658" },
+    vampiric: { name: "汲血", glyph: "♥", color: "#c94e72" },
+    volatile: { name: "爆裂", glyph: "✹", color: "#e8ad4f" }
+  };
+  const weaponNames = { repeater: "泪火连弩", scatter: "霰火心脏", wisp: "游魂提灯", cleaver: "锯齿祭刃" };
+  const weaponDescriptions = { repeater: "稳定连射", scatter: "近距爆发", wisp: "双灵体齐射", cleaver: "近战格挡弹幕" };
+  const bossStageNames = {
+    bossBrood: ["猎食", "孵化", "腐地"],
+    bossWarden: ["裁决", "封锁", "熔牢"],
+    bossHeart: ["凝视", "心跳", "狂搏"]
+  };
   const heroes = {
     breaker: { name: "爆破者", path: "摧毁流", tag: "destroy", skill: "爆裂震波", color: "#c75c45", apply: player => { player.damage = 1.25; player.fireRate = .24; player.skillDelay = 8; } },
     gambler: { name: "铸币客", path: "硬币流", tag: "coin", skill: "弹壳风暴", color: "#d4a44e", apply: player => { player.coins = 6; player.damage = .9; player.fireRate = .2; player.skillDelay = 6; } },
@@ -56,7 +69,19 @@
     { id: "cloak", tag: "titan", name: "残影斗篷", icon: "◒", detail: "翻滚冷却 -18%", apply: player => { player.rollDelay = Math.max(.42, player.rollDelay * .82); } },
     { id: "candle", tag: "titan", name: "守夜残烛", icon: "♨", detail: "清房恢复半颗心", apply: player => { player.roomHeal = Math.min(2, player.roomHeal + 1); } },
     { id: "shield", tag: "titan", name: "蓝铁护符", icon: "◆", detail: "抵挡下一次伤害", apply: player => { player.armor += 1; } },
-    { id: "titanSkull", tag: "titan", name: "泰坦之颅", icon: "◫", detail: "生命 +2，碰撞减伤", apply: player => { player.maxHp += 2; player.hp += 2; player.contactGuard += .25; } }
+    { id: "titanSkull", tag: "titan", name: "泰坦之颅", icon: "◫", detail: "生命 +2，碰撞减伤", apply: player => { player.maxHp += 2; player.hp += 2; player.contactGuard += .25; } },
+    { id: "scatterHeart", tag: "destroy", name: "霰火心脏", icon: "⋔", detail: "切换霰火；重复获得可进化", core: true, apply: player => equipWeapon(player, "scatter") },
+    { id: "emberFlask", tag: "destroy", name: "余烬胆汁", icon: "♨", detail: "攻击有 28% 概率燃烧", apply: player => { player.burnChance = Math.min(.8, player.burnChance + .28); } },
+    { id: "furnaceCore", tag: "destroy", name: "爆燃炉芯", icon: "※", detail: "燃烧敌人死亡时爆炸", apply: player => { player.burnExplosion = true; } },
+    { id: "stormCoil", tag: "coin", name: "雷鸣线圈", icon: "ϟ", detail: "攻击有 22% 概率感电", apply: player => { player.shockChance = Math.min(.75, player.shockChance + .22); } },
+    { id: "venomCoin", tag: "coin", name: "蚀毒钱币", icon: "☣", detail: "攻击有 24% 概率中毒", apply: player => { player.poisonChance = Math.min(.8, player.poisonChance + .24); } },
+    { id: "bloodContract", tag: "coin", name: "鲜血契约", icon: "↯", detail: "攻击翻倍，生命上限减半", cursed: true, unlockAt: 3, apply: player => { player.damage *= 2; player.maxHp = Math.max(2, Math.ceil(player.maxHp / 2)); player.hp = Math.min(player.hp, player.maxHp); } },
+    { id: "witchLantern", tag: "spell", name: "游魂提灯", icon: "☄", detail: "切换游魂；重复获得可进化", core: true, unlockAt: 1, apply: player => equipWeapon(player, "wisp") },
+    { id: "frostRune", tag: "spell", name: "霜噬符文", icon: "❄", detail: "攻击有 24% 概率冻结", apply: player => { player.freezeChance = Math.min(.8, player.freezeChance + .24); } },
+    { id: "shatterSeal", tag: "spell", name: "碎晶魔印", icon: "✧", detail: "冻结敌人死亡时碎裂", unlockAt: 1, apply: player => { player.shatter = true; } },
+    { id: "serratedCrown", tag: "titan", name: "锯齿王冠", icon: "⌁", detail: "切换祭刃；重复获得可进化", core: true, unlockAt: 3, apply: player => equipWeapon(player, "cleaver") },
+    { id: "barbedHook", tag: "titan", name: "倒刺钩爪", icon: "⌇", detail: "攻击有 32% 概率流血", apply: player => { player.bleedChance = Math.min(.85, player.bleedChance + .32); } },
+    { id: "bloodChalice", tag: "titan", name: "猩红圣杯", icon: "♜", detail: "近战命中流血目标时恢复", apply: player => { player.bleedHeal = true; } }
   ];
 
   let width = 0;
@@ -70,10 +95,14 @@
   let hitStop = 0;
   let enemySerial = 0;
   let selectedHero = "breaker";
+  let selectedWeapon = "repeater";
   let audioContext;
   const keys = new Set();
   const pointer = { x: ROOM_WIDTH / 2, y: ROOM_HEIGHT / 2, down: false, moveDown: false, active: false };
   const touchMove = { x: 0, y: 0 };
+  const META_KEY = "shell-dungeon-meta-v2";
+  const weaponUnlocks = { repeater: 0, scatter: 0, wisp: 1, cleaver: 3 };
+  let metaProgress = loadMetaProgress();
 
   const random = (min, max) => min + Math.random() * (max - min);
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -81,6 +110,68 @@
   const isBoss = enemy => enemy.type.startsWith("boss");
   const angleDelta = (target, current) => Math.atan2(Math.sin(target - current), Math.cos(target - current));
   const turnToward = (current, target, amount) => current + angleDelta(target, current) * clamp(amount, 0, 1);
+
+  function loadMetaProgress() {
+    const fallback = { runs: 0, wins: 0, bossDefeats: 0, bestKills: 0 };
+    try {
+      const stored = window.localStorage && window.localStorage.getItem(META_KEY);
+      return stored ? { ...fallback, ...JSON.parse(stored) } : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function saveMetaProgress() {
+    try {
+      if (window.localStorage) window.localStorage.setItem(META_KEY, JSON.stringify(metaProgress));
+    } catch {}
+    updateMetaUi();
+  }
+
+  function isWeaponUnlocked(weapon) {
+    return metaProgress.bossDefeats >= (weaponUnlocks[weapon] || 0);
+  }
+
+  function availableItems() {
+    return items.filter(item => !item.unlockAt || metaProgress.bossDefeats >= item.unlockAt);
+  }
+
+  function equipWeapon(player, weapon) {
+    if (player.weapon === weapon) player.weaponLevel = Math.min(3, player.weaponLevel + 1);
+    else {
+      player.weapon = weapon;
+      player.weaponLevel = 1;
+    }
+    if (weapon === "scatter") player.shots = Math.max(2 + player.weaponLevel, player.shots);
+    if (weapon === "wisp") player.familiars = Math.max(1 + player.weaponLevel, player.familiars);
+    if (weapon === "cleaver") player.damage += .22 + player.weaponLevel * .08;
+  }
+
+  function updateMetaUi() {
+    const progress = document.querySelector("#meta-progress");
+    if (progress) progress.textContent = `远征 ${metaProgress.runs} · 通关 ${metaProgress.wins} · Boss 印记 ${metaProgress.bossDefeats} · 最佳击杀 ${metaProgress.bestKills}`;
+    document.querySelectorAll(".weapon-card").forEach(button => {
+      const unlocked = isWeaponUnlocked(button.dataset.weapon);
+      button.disabled = !unlocked;
+      button.classList.toggle("locked", !unlocked);
+      const requirement = weaponUnlocks[button.dataset.weapon];
+      const hint = button.querySelector("em");
+      if (hint) hint.textContent = unlocked ? weaponDescriptions[button.dataset.weapon] : `击败 ${requirement} 个 Boss 解锁`;
+      if (!unlocked && selectedWeapon === button.dataset.weapon) selectedWeapon = "repeater";
+    });
+  }
+
+  function recordBossDefeat() {
+    const before = Object.fromEntries(Object.keys(weaponUnlocks).map(weapon => [weapon, isWeaponUnlocked(weapon)]));
+    metaProgress.bossDefeats += 1;
+    for (const weapon of Object.keys(weaponUnlocks)) {
+      if (!before[weapon] && isWeaponUnlocked(weapon)) {
+        game.unlocks.push(weaponNames[weapon]);
+        game.texts.push({ text: `永久解锁 · ${weaponNames[weapon]}`, x: ROOM_WIDTH / 2, y: 160, life: 3.2, color: "#a9e5bc" });
+      }
+    }
+    saveMetaProgress();
+  }
 
   function sound(frequency, duration = .06, type = "triangle", volume = .018) {
     const AudioEngine = window.AudioContext || window.webkitAudioContext;
@@ -202,7 +293,7 @@
   }
 
   function randomItems(count, preferredTag) {
-    const pool = [...items];
+    const pool = [...availableItems()];
     const result = [];
     if (preferredTag) {
       const preferred = pool.filter(item => item.tag === preferredTag);
@@ -284,6 +375,14 @@
       comboTimer: 0,
       perfectRooms: 0,
       destroyedProps: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+      damageBySource: {},
+      lastDamageSource: "尚未受伤",
+      unlocks: [],
+      affixesSeen: {},
+      routeChoices: 0,
+      routeChoice: null,
       roomHit: false,
       synergies: {},
       itemStacks: {},
@@ -295,6 +394,10 @@
       pickups: [],
       obstacles: [],
       bombs: [],
+      hazards: [],
+      slashes: [],
+      bossWaves: [],
+      arenaInset: 0,
       texts: [],
       doorOpen: false,
       transition: 1,
@@ -307,15 +410,33 @@
         walk: 0, moveBlend: 0, recoil: 0, squash: 0, muzzleFlash: 0, rollAngle: 0,
         rollSpin: 0, trailTimer: 0, skillCooldown: 0, skillDelay: 8, rage: 0,
         explosion: 0, deathBurst: 0, chain: 0, discount: 0, luck: 0,
-        coinPower: 0, contactGuard: 0, hero: selectedHero
+        coinPower: 0, contactGuard: 0, hero: selectedHero, weapon: "repeater", weaponLevel: 1, familiars: 0,
+        burnChance: 0, freezeChance: 0, poisonChance: 0, bleedChance: 0, shockChance: 0,
+        burnExplosion: false, shatter: false, bleedHeal: false, healCharge: 0, familiarPhase: 0
       }
     };
     heroes[selectedHero].apply(game.player);
+    applyStartingWeapon(game.player, isWeaponUnlocked(selectedWeapon) ? selectedWeapon : "repeater");
     enterRoom(0);
     startScreen.classList.remove("visible");
     endScreen.classList.remove("visible");
     touchUi.classList.add("active");
     requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
+  }
+
+  function applyStartingWeapon(player, weapon) {
+    player.weapon = weapon;
+    player.weaponLevel = 1;
+    if (weapon === "scatter") {
+      player.shots = Math.max(3, player.shots);
+      player.damage *= .86;
+    } else if (weapon === "wisp") {
+      player.familiars = 2;
+      player.damage *= .9;
+    } else if (weapon === "cleaver") {
+      player.damage *= 1.18;
+      player.speed += 10;
+    }
   }
 
   function enterRoom(index) {
@@ -328,6 +449,10 @@
     game.pickups.length = 0;
     game.obstacles.length = 0;
     game.bombs.length = 0;
+    game.hazards.length = 0;
+    game.slashes.length = 0;
+    game.bossWaves.length = 0;
+    game.arenaInset = 0;
     game.texts.length = 0;
     game.roomHit = false;
     game.player.x = 108;
@@ -337,6 +462,13 @@
     game.transition = 1;
     const room = game.rooms[index];
     room.enemies.forEach(spawnEnemy);
+    if (room.kind === "sanctuary" && !room.cleared) {
+      room.cleared = true;
+      game.player.hp = Math.min(game.player.maxHp, game.player.hp + 3);
+      game.player.armor += 1;
+      game.doorOpen = true;
+      game.texts.push({ text: "守烛圣所 · 恢复生命并获得护盾", x: ROOM_WIDTH / 2, y: 128, life: 2.8, color: "#a7e4bc" });
+    }
     if (room.kind === "treasure" && !room.cleared) {
       room.choices.forEach((item, choice) => game.pickups.push({ x: 390 + choice * 135, y: ROOM_HEIGHT / 2, type: "item", item, phase: choice, choiceGroup: "treasure" }));
       game.texts.push({ text: "宝库馈赠 · 三选一", x: ROOM_WIDTH / 2, y: 130, life: 2.5 });
@@ -351,7 +483,7 @@
   }
 
   function createObstacles(room) {
-    if (["treasure", "shop"].includes(room.kind)) return;
+    if (["treasure", "shop", "sanctuary"].includes(room.kind)) return;
     const count = room.kind === "boss" ? 2 : 4 + room.chapter;
     for (let index = 0; index < count; index += 1) {
       const seed = room.level * 83 + index * 29;
@@ -378,7 +510,7 @@
     const cultist = type === "cultist";
     const bomber = type === "bomber";
     const room = game.rooms[game.room];
-    const levelScale = (1 + game.room * .07) * (room.modifier === "swarm" ? .86 : 1);
+    const levelScale = (1 + game.room * .07) * (room.modifier === "swarm" ? .86 : 1) * (room.riskReward ? 1.3 : 1);
     const bossHp = type === "bossBrood" ? 34 : type === "bossWarden" ? 52 : 72;
     const baseHp = boss ? bossHp : turret ? 9 : splitter ? 8 : cultist ? 7 : bomber ? 10 : charger ? 6 : leech ? 4 : bat ? 3 : 4;
     let x;
@@ -387,45 +519,84 @@
       x = random(boss ? 430 : 330, ROOM_WIDTH - 90);
       y = random(90, ROOM_HEIGHT - 90);
     } while (Math.hypot(x - game.player.x, y - game.player.y) < 220);
-    game.enemies.push({
+    const elite = game.rooms[game.room].kind === "elite" && !boss;
+    const affixKeys = Object.keys(eliteAffixes);
+    const affix = elite ? affixKeys[(game.room + enemySerial + 1) % affixKeys.length] : null;
+    if (affix) game.affixesSeen[affix] = (game.affixesSeen[affix] || 0) + 1;
+    const enemy = {
       id: ++enemySerial, type, x, y, radius: boss ? (type === "bossHeart" ? 50 : type === "bossWarden" ? 47 : 49) : bomber ? 22 : turret ? 20 : splitter ? 19 : cultist ? 18 : charger ? 18 : leech ? 12 : bat ? 13 : 16,
-      hp: Math.ceil(baseHp * levelScale * (game.rooms[game.room].kind === "elite" && !boss ? 1.55 : 1)),
-      maxHp: Math.ceil(baseHp * levelScale * (game.rooms[game.room].kind === "elite" && !boss ? 1.55 : 1)),
-      speed: (boss ? 70 : bomber ? 48 : turret ? 30 : splitter ? 56 : cultist ? 68 : charger ? 80 : leech ? 150 : bat ? 138 : random(64, 92)) * (room.modifier === "frenzy" ? 1.24 : 1),
+      hp: Math.ceil(baseHp * levelScale * (elite ? 1.55 : 1)),
+      maxHp: Math.ceil(baseHp * levelScale * (elite ? 1.55 : 1)),
+      speed: (boss ? 70 : bomber ? 48 : turret ? 30 : splitter ? 56 : cultist ? 68 : charger ? 80 : leech ? 150 : bat ? 138 : random(64, 92)) * (room.modifier === "frenzy" ? 1.24 : 1) * (affix === "frenzied" ? 1.22 : 1),
       cooldown: random(.3, 1.2), angle: 0, flash: 0, recoil: 0, attackFlash: 0, squash: 0,
       phase: random(0, TAU), charge: 0, windup: 0, chargeAngle: 0, spawnCooldown: 2.8,
-      elite: game.rooms[game.room].kind === "elite" && !boss, dead: false
-    });
+      elite, affix, shield: affix === "warded" ? Math.ceil(4 * levelScale) : 0,
+      maxShield: affix === "warded" ? Math.ceil(4 * levelScale) : 0,
+      summons: 0, guardTextCooldown: 0,
+      statuses: { burn: 0, freeze: 0, poison: 0, bleed: 0, shock: 0 },
+      statusTicks: { burn: 0, poison: 0, bleed: 0 }, bossStage: boss ? 1 : 0,
+      stageTransition: 0, waveCooldown: 2.4, hazardCooldown: 2.8, dead: false
+    };
+    game.enemies.push(enemy);
   }
 
   function firePlayer(angle) {
     const player = game.player;
     if (player.cooldown > 0 || player.roll > 0) return;
-    player.cooldown = player.fireRate;
     player.angle = angle;
     player.aimAngle = angle;
-    player.recoil = 6;
+    if (player.weapon === "cleaver") {
+      swingCleaver(angle);
+      return;
+    }
+    player.cooldown = player.weapon === "scatter" ? Math.max(.32, player.fireRate * 1.55) : player.fireRate;
+    player.recoil = player.weapon === "scatter" ? 10 : 6;
     player.squash = Math.max(player.squash, .28);
     player.muzzleFlash = .075;
     const critical = Math.random() < player.critChance;
     const coinMultiplier = 1 + Math.min(1.5, player.coins * player.coinPower);
     const rageMultiplier = player.rage > 0 ? 1.65 : 1;
-    for (let shot = 0; shot < player.shots; shot += 1) {
-      const shotAngle = angle + (shot - (player.shots - 1) / 2) * .105;
+    const shotCount = player.weapon === "scatter" ? Math.max(3, player.shots) : player.weapon === "wisp" ? Math.max(2, player.familiars) : player.shots;
+    const spread = player.weapon === "scatter" ? .2 : player.weapon === "wisp" ? .08 : .105;
+    const damageMultiplier = player.weapon === "scatter" ? .68 : player.weapon === "wisp" ? .72 : 1;
+    const speedMultiplier = player.weapon === "scatter" ? .88 : player.weapon === "wisp" ? .82 : 1;
+    const lifeMultiplier = player.weapon === "scatter" ? .58 : player.weapon === "wisp" ? 1.18 : 1;
+    for (let shot = 0; shot < shotCount; shot += 1) {
+      const shotAngle = angle + (shot - (shotCount - 1) / 2) * spread;
+      const familiarAngle = player.familiarPhase + shot / shotCount * TAU;
+      const originX = player.weapon === "wisp" ? player.x + Math.cos(familiarAngle) * 34 : player.x + Math.cos(shotAngle) * 19;
+      const originY = player.weapon === "wisp" ? player.y + Math.sin(familiarAngle) * 24 : player.y + Math.sin(shotAngle) * 19;
       game.bullets.push({
-        x: player.x + Math.cos(shotAngle) * 19,
-        y: player.y + Math.sin(shotAngle) * 19,
-        previousX: player.x + Math.cos(shotAngle) * 12,
-        previousY: player.y + Math.sin(shotAngle) * 12,
-        vx: Math.cos(shotAngle) * player.bulletSpeed,
-        vy: Math.sin(shotAngle) * player.bulletSpeed,
+        x: originX, y: originY, previousX: originX - Math.cos(shotAngle) * 7, previousY: originY - Math.sin(shotAngle) * 7,
+        vx: Math.cos(shotAngle) * player.bulletSpeed * speedMultiplier,
+        vy: Math.sin(shotAngle) * player.bulletSpeed * speedMultiplier,
         radius: player.bulletSize + (critical ? 1.5 : 0), life: player.bulletLife,
-        damage: player.damage * coinMultiplier * rageMultiplier * (critical ? 2 : 1), critical,
-        pierce: player.pierce, explosion: player.explosion, chain: player.chain, hitIds: new Set()
+        maxLife: player.bulletLife * lifeMultiplier,
+        damage: player.damage * damageMultiplier * coinMultiplier * rageMultiplier * (critical ? 2 : 1), critical,
+        pierce: player.pierce, explosion: player.explosion, chain: player.chain + (player.weapon === "wisp" ? 1 : 0),
+        weapon: player.weapon, playerAttack: true, hitIds: new Set()
       });
+      game.bullets.at(-1).life = game.bullets.at(-1).maxLife;
     }
-    directionalBurst(player.x + Math.cos(angle) * 34, player.y + Math.sin(angle) * 34, angle, "#ffd76a", 5, 95);
-    sound(220 + Math.random() * 35, .045, "triangle", .009);
+    directionalBurst(player.x + Math.cos(angle) * 34, player.y + Math.sin(angle) * 34, angle, player.weapon === "wisp" ? "#bca8ff" : "#ffd76a", player.weapon === "scatter" ? 9 : 5, player.weapon === "scatter" ? 155 : 95);
+    sound(player.weapon === "scatter" ? 145 : player.weapon === "wisp" ? 330 : 220 + Math.random() * 35, player.weapon === "scatter" ? .08 : .045, player.weapon === "wisp" ? "sine" : "triangle", player.weapon === "scatter" ? .016 : .009);
+  }
+
+  function swingCleaver(angle) {
+    const player = game.player;
+    const critical = Math.random() < player.critChance;
+    const coinMultiplier = 1 + Math.min(1.5, player.coins * player.coinPower);
+    player.cooldown = Math.max(.3, player.fireRate * 1.6);
+    player.recoil = -4;
+    player.squash = .62;
+    game.slashes.push({
+      x: player.x, y: player.y, angle, radius: 82 + player.bulletSize * 2 + (player.weaponLevel - 1) * 12,
+      arc: 1.55 + (player.weaponLevel - 1) * .18, life: .18, maxLife: .18,
+      damage: player.damage * coinMultiplier * (player.rage > 0 ? 1.65 : 1) * (2.15 + (player.weaponLevel - 1) * .28) * (critical ? 2 : 1),
+      critical, playerAttack: true, melee: true, hitIds: new Set()
+    });
+    directionalBurst(player.x + Math.cos(angle) * 54, player.y + Math.sin(angle) * 54, angle, critical ? "#fff2a1" : "#d8c7a4", 12, 190);
+    sound(125, .11, "sawtooth", .018);
   }
 
   function enemyFire(enemy, count = 1, spread = .18) {
@@ -435,7 +606,7 @@
     for (let index = 0; index < count; index += 1) {
       const angle = base + (index - (count - 1) / 2) * spread;
       const speed = isBoss(enemy) ? 240 : 190;
-      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: isBoss(enemy) ? 6 : 5, life: 4 });
+      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: isBoss(enemy) ? 6 : 5, life: 4, ownerId: enemy.id, kind: isBoss(enemy) ? "Boss 弹幕" : "敌方弹幕" });
     }
     directionalBurst(enemy.x + Math.cos(base) * enemy.radius, enemy.y + Math.sin(base) * enemy.radius, base, "#ff7657", isBoss(enemy) ? 8 : 4, 80);
   }
@@ -445,7 +616,17 @@
     enemy.squash = .34;
     for (let index = 0; index < count; index += 1) {
       const angle = enemy.phase + index / count * TAU;
-      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * 155, vy: Math.sin(angle) * 155, radius: 6, life: 5 });
+      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * 155, vy: Math.sin(angle) * 155, radius: 6, life: 5, ownerId: enemy.id, kind: isBoss(enemy) ? "Boss 弹幕" : "敌方弹幕" });
+    }
+    shockwave(enemy.x, enemy.y, "#e45645", 4);
+  }
+
+  function radialFireAtSpeed(enemy, count, speed, offset = enemy.phase) {
+    enemy.attackFlash = .16;
+    enemy.squash = .34;
+    for (let index = 0; index < count; index += 1) {
+      const angle = offset + index / count * TAU;
+      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: 6, life: 5, ownerId: enemy.id, kind: "Boss 弹幕" });
     }
     shockwave(enemy.x, enemy.y, "#e45645", 4);
   }
@@ -569,7 +750,16 @@
       game.texts.push({ text: "护盾破碎", x: player.x, y: player.y - 34, life: 1.2 });
       return;
     }
-    player.hp -= source && source.type && player.contactGuard ? Math.max(.5, amount * (1 - player.contactGuard)) : amount;
+    const damage = source && source.type && player.contactGuard ? Math.max(.5, amount * (1 - player.contactGuard)) : amount;
+    player.hp -= damage;
+    game.damageTaken += damage;
+    game.lastDamageSource = source?.kind || (source?.type ? `接触：${source.type}` : "未知伤害");
+    const attacker = source && source.ownerId ? game.enemies.find(enemy => enemy.id === source.ownerId) : source && source.id ? source : null;
+    if (attacker && attacker.affix === "vampiric" && !attacker.dead) {
+      attacker.hp = Math.min(attacker.maxHp, attacker.hp + 1.5);
+      game.texts.push({ text: "汲血 +", x: attacker.x, y: attacker.y - attacker.radius - 10, life: .65, color: "#f07899", size: 13, velocityY: -18 });
+      directionalBurst(player.x, player.y, Math.atan2(attacker.y - player.y, attacker.x - player.x), "#c94e72", 8, 120);
+    }
     game.roomHit = true;
     player.invincible = 1;
     player.flash = .2;
@@ -589,15 +779,38 @@
     game.kills += 1;
     game.combo = Math.min(30, game.combo + 1);
     game.comboTimer = 3.5;
-    if (isBoss(enemy)) game.bossKills += 1;
+    if (isBoss(enemy)) {
+      game.bossKills += 1;
+      recordBossDefeat();
+    }
+    if (enemy.type === "bossWarden") game.arenaInset = 0;
     screenShake = isBoss(enemy) ? 18 : 5;
     burst(enemy.x, enemy.y, isBoss(enemy) ? "#f7bd53" : "#c84c4c", isBoss(enemy) ? 40 : 15, isBoss(enemy) ? 260 : 150);
     sound(isBoss(enemy) ? 72 : 130, isBoss(enemy) ? .42 : .08, "square", isBoss(enemy) ? .04 : .012);
+    if (game.player.shatter && enemy.statuses && enemy.statuses.freeze > 0) {
+      shockwave(enemy.x, enemy.y, "#9fe8f4", 16);
+      for (const target of game.enemies) {
+        if (!target.dead && target !== enemy && distance(target, enemy) < 105) damageEnemy(target, .75 + game.player.damage * .45, { x: enemy.x, y: enemy.y, statusTick: true, statusType: "shock" });
+      }
+    }
+    if (game.player.burnExplosion && enemy.statuses && enemy.statuses.burn > 0) {
+      shockwave(enemy.x, enemy.y, "#f28b49", 18);
+      for (const target of game.enemies) {
+        if (!target.dead && target !== enemy && distance(target, enemy) < 115) {
+          target.statuses.burn = Math.max(target.statuses.burn, 2.2);
+          damageEnemy(target, .6 + game.player.damage * .35, { x: enemy.x, y: enemy.y, statusTick: true, statusType: "burn" });
+        }
+      }
+    }
     if (isBoss(enemy)) {
       game.pickups.push({ x: enemy.x - 20, y: enemy.y, type: "crown", phase: 0 });
-      if (game.room < game.rooms.length - 1) game.pickups.push({ x: enemy.x + 24, y: enemy.y, type: "item", item: randomChoice(items), phase: 0, spawnDelay: .35 });
-    } else if (Math.random() < .38 + game.player.luck + Math.min(.22, game.combo * .012) + (game.rooms[game.room].modifier === "fortune" ? .24 : 0)) {
+      if (game.room < game.rooms.length - 1) game.pickups.push({ x: enemy.x + 24, y: enemy.y, type: "item", item: randomChoice(availableItems()), phase: 0, spawnDelay: .35 });
+    } else if (!enemy.summonedBy && Math.random() < .38 + game.player.luck + Math.min(.22, game.combo * .012) + (game.rooms[game.room].modifier === "fortune" ? .24 : 0)) {
       game.pickups.push({ x: enemy.x, y: enemy.y, type: Math.random() < .35 ? "heart" : "coin", phase: 0 });
+    }
+    if (enemy.affix === "volatile") {
+      game.bombs.push({ x: enemy.x, y: enemy.y, timer: .72, pulse: 0, radius: 12, volatile: true });
+      game.texts.push({ text: "爆裂遗骸", x: enemy.x, y: enemy.y - 30, life: .72, color: "#ffb257", size: 13, velocityY: -18 });
     }
     if (game.player.deathBurst > 0 && !isBoss(enemy)) {
       for (const target of game.enemies) {
@@ -632,6 +845,7 @@
     player.recoil *= Math.pow(.0008, dt);
     player.squash *= Math.pow(.003, dt);
     player.muzzleFlash = Math.max(0, player.muzzleFlash - dt);
+    player.familiarPhase += dt * 2.15;
     if (player.roll > 0) player.roll -= dt;
     player.knockbackX *= Math.pow(.025, dt);
     player.knockbackY *= Math.pow(.025, dt);
@@ -649,8 +863,10 @@
     if (Math.hypot(moveX, moveY) > 1) { moveX /= moveLength; moveY /= moveLength; }
     const moving = Math.min(1, Math.hypot(moveX, moveY));
     const rageMultiplier = player.rage > 0 ? 1.22 : 1;
+    const hazardSlow = game.hazards.some(hazard => distance(player, hazard) < hazard.radius + player.radius) ? .58 : 1;
+    player.slowed = hazardSlow < 1;
     const rolling = player.roll > 0;
-    const targetSpeed = player.speed * rageMultiplier * (rolling ? 2.8 : moving);
+    const targetSpeed = player.speed * rageMultiplier * (rolling ? 2.8 : moving * hazardSlow);
     const targetAngle = rolling ? player.rollAngle : Math.atan2(moveY, moveX);
     const desiredX = moving || rolling ? Math.cos(targetAngle) * targetSpeed : 0;
     const desiredY = moving || rolling ? Math.sin(targetAngle) * targetSpeed : 0;
@@ -673,8 +889,9 @@
         });
       }
     }
-    player.x = clamp(player.x + (player.vx + player.knockbackX) * dt, WALL + player.radius, ROOM_WIDTH - WALL - player.radius);
-    player.y = clamp(player.y + (player.vy + player.knockbackY) * dt, WALL + player.radius, ROOM_HEIGHT - WALL - player.radius);
+    const arenaWall = WALL + game.arenaInset;
+    player.x = clamp(player.x + (player.vx + player.knockbackX) * dt, arenaWall + player.radius, ROOM_WIDTH - arenaWall - player.radius);
+    player.y = clamp(player.y + (player.vy + player.knockbackY) * dt, arenaWall + player.radius, ROOM_HEIGHT - arenaWall - player.radius);
     resolveObstacleCollision(player);
 
     let aimX = 0;
@@ -699,8 +916,11 @@
     }
 
     updateBullets(dt);
+    updateSlashes(dt);
     updateEnemies(dt);
     updateBombs(dt);
+    updateHazards(dt);
+    updateBossWaves(dt);
     updateParticles(dt);
     updatePickups(dt);
     game.comboTimer -= dt;
@@ -708,7 +928,8 @@
 
     const currentRoom = game.rooms[game.room];
     const waitingForTreasure = currentRoom.kind === "treasure" && game.pickups.some(pickup => ["chest", "opening", "item"].includes(pickup.type));
-    if (!game.enemies.some(enemy => !enemy.dead) && !waitingForTreasure && !game.doorOpen) {
+    const waitingForRoute = Boolean(game.routeChoice);
+    if (!game.enemies.some(enemy => !enemy.dead) && !waitingForTreasure && !waitingForRoute && !game.doorOpen) {
       currentRoom.cleared = true;
       game.doorOpen = true;
       if (player.roomHeal > 0) player.hp = Math.min(player.maxHp, player.hp + player.roomHeal);
@@ -722,8 +943,10 @@
       for (const bullet of game.enemyBullets) burst(bullet.x, bullet.y, "#765d69", 2, 30);
       game.enemyBullets.length = 0;
       if (currentRoom.kind !== "treasure" && currentRoom.kind !== "boss" && (currentRoom.kind === "elite" || Math.random() < .28)) {
-        game.pickups.push({ x: ROOM_WIDTH / 2, y: ROOM_HEIGHT / 2, type: "item", item: randomChoice(items), phase: 0 });
+        game.pickups.push({ x: ROOM_WIDTH / 2, y: ROOM_HEIGHT / 2, type: "item", item: randomChoice(availableItems()), phase: 0 });
+        if (currentRoom.riskReward) game.pickups.push({ x: ROOM_WIDTH / 2 + 64, y: ROOM_HEIGHT / 2, type: "item", item: randomChoice(availableItems()), phase: 1 });
       }
+      if (currentRoom.riskReward) player.coins += 4;
       game.texts.push({ text: game.room === game.rooms.length - 1 ? "地牢核心已净化" : "房间已清空 · 出口开启", x: ROOM_WIDTH / 2, y: 94, life: 2 });
     }
     if (game.doorOpen && player.x > ROOM_WIDTH - WALL - player.radius - 3) {
@@ -790,26 +1013,148 @@
     game.enemyBullets = game.enemyBullets.filter(inBounds);
   }
 
+  function updateSlashes(dt) {
+    for (const slash of game.slashes) {
+      slash.life -= dt;
+      for (const enemy of game.enemies) {
+        if (enemy.dead || slash.hitIds.has(enemy.id) || distance(slash, enemy) > slash.radius + enemy.radius) continue;
+        const targetAngle = Math.atan2(enemy.y - slash.y, enemy.x - slash.x);
+        if (Math.abs(angleDelta(targetAngle, slash.angle)) > slash.arc / 2) continue;
+        slash.hitIds.add(enemy.id);
+        damageEnemy(enemy, slash.damage, slash);
+        impactBurst(enemy.x, enemy.y, slash.angle, slash.critical);
+      }
+      for (const bullet of game.enemyBullets) {
+        if (bullet.life <= 0 || distance(slash, bullet) > slash.radius) continue;
+        const bulletAngle = Math.atan2(bullet.y - slash.y, bullet.x - slash.x);
+        if (Math.abs(angleDelta(bulletAngle, slash.angle)) > slash.arc / 2) continue;
+        bullet.life = 0;
+        directionalBurst(bullet.x, bullet.y, slash.angle, "#b9e8ef", 5, 120);
+      }
+    }
+    game.slashes = game.slashes.filter(slash => slash.life > 0);
+    game.enemyBullets = game.enemyBullets.filter(inBounds);
+  }
+
+  function applyAttackStatuses(enemy, source) {
+    if (!source || !source.playerAttack || source.statusTick || enemy.dead) return;
+    const player = game.player;
+    const statuses = enemy.statuses;
+    if (Math.random() < player.burnChance) { statuses.burn = Math.max(statuses.burn, 3.2); enemy.statusTicks.burn = 0; }
+    if (Math.random() < player.freezeChance) statuses.freeze = Math.max(statuses.freeze, 2.1);
+    if (Math.random() < player.poisonChance) { statuses.poison = Math.max(statuses.poison, 4.2); enemy.statusTicks.poison = 0; }
+    if (Math.random() < player.bleedChance) {
+      statuses.bleed = Math.max(statuses.bleed, 3.8);
+      enemy.bleedStacks = Math.min(5, (enemy.bleedStacks || 0) + 1);
+      enemy.statusTicks.bleed = 0;
+    }
+    if (Math.random() < player.shockChance) {
+      statuses.shock = Math.max(statuses.shock, 1.1);
+      const target = game.enemies.find(candidate => !candidate.dead && candidate !== enemy && distance(candidate, enemy) < 125);
+      if (target) {
+        drawLightningBurst(enemy, target);
+        damageEnemy(target, .45 + player.damage * .22, { x: enemy.x, y: enemy.y, statusTick: true, statusType: "shock" });
+        target.statuses.shock = Math.max(target.statuses.shock, .65);
+        if (statuses.burn > 0) target.statuses.burn = Math.max(target.statuses.burn, 1.8);
+      }
+    }
+    if (source.melee && player.bleedHeal && statuses.bleed > 0) {
+      player.healCharge += .34;
+      if (player.healCharge >= 1) {
+        player.healCharge -= 1;
+        player.hp = Math.min(player.maxHp, player.hp + 1);
+        game.texts.push({ text: "鲜血回响 +½", x: player.x, y: player.y - 35, life: .75, color: "#ef7186", size: 13, velocityY: -20 });
+      }
+    }
+  }
+
+  function updateEnemyStatuses(enemy, dt) {
+    const statuses = enemy.statuses;
+    for (const key of Object.keys(statuses)) statuses[key] = Math.max(0, statuses[key] - dt);
+    if (statuses.burn > 0) {
+      enemy.statusTicks.burn -= dt;
+      if (enemy.statusTicks.burn <= 0) {
+        enemy.statusTicks.burn = .55;
+        damageEnemy(enemy, .2 + game.player.damage * .08, { x: enemy.x - 1, y: enemy.y, statusTick: true, statusType: "burn" });
+      }
+    }
+    if (!enemy.dead && statuses.poison > 0) {
+      enemy.statusTicks.poison -= dt;
+      if (enemy.statusTicks.poison <= 0) {
+        enemy.statusTicks.poison = .72;
+        damageEnemy(enemy, .16 + game.player.damage * .06, { x: enemy.x - 1, y: enemy.y, statusTick: true, statusType: "poison" });
+      }
+    }
+    if (!enemy.dead && statuses.bleed > 0) {
+      enemy.statusTicks.bleed -= dt;
+      if (enemy.statusTicks.bleed <= 0) {
+        enemy.statusTicks.bleed = .78;
+        damageEnemy(enemy, .16 * Math.max(1, enemy.bleedStacks || 1), { x: enemy.x - 1, y: enemy.y, statusTick: true, statusType: "bleed" });
+      }
+    } else if (statuses.bleed <= 0) enemy.bleedStacks = 0;
+  }
+
+  function guardianFor(enemy) {
+    return game.enemies.find(candidate => {
+      if (candidate.dead || candidate === enemy || isBoss(candidate)) return false;
+      const activeGuardian = candidate.type === "splitter" || (candidate.affix === "warded" && candidate.shield > 0);
+      return activeGuardian && distance(candidate, enemy) < (candidate.type === "splitter" ? 155 : 125);
+    });
+  }
+
   function damageEnemy(enemy, amount, source) {
     if (!enemy || enemy.dead) return;
-    enemy.hp -= amount;
-    enemy.flash = .12;
-    enemy.squash = Math.max(enemy.squash || 0, source && source.critical ? .72 : .38);
+    if (enemy.stageTransition > 0 && !(source && source.statusTick)) {
+      const deflectAngle = source && Number.isFinite(source.vx) ? Math.atan2(source.vy, source.vx) + Math.PI : 0;
+      directionalBurst(enemy.x, enemy.y, deflectAngle, "#d9c4a0", 5, 110);
+      return;
+    }
     const critical = Boolean(source && source.critical);
     const impactAngle = source && Number.isFinite(source.vx) ? Math.atan2(source.vy, source.vx) : source ? Math.atan2(enemy.y - source.y, enemy.x - source.x) : 0;
-    hitStop = Math.max(hitStop, source && source.skill ? .055 : critical ? .045 : .018);
-    screenShake = Math.max(screenShake, source && source.skill ? 7 : critical ? 5 : 2.5);
+    if (enemy.shield > 0) {
+      const absorbed = Math.min(enemy.shield, amount);
+      enemy.shield -= absorbed;
+      amount -= absorbed;
+      enemy.flash = .1;
+      hitStop = Math.max(hitStop, .026);
+      directionalBurst(enemy.x, enemy.y, impactAngle + Math.PI, "#80daf1", 9, 175);
+      game.texts.push({ text: enemy.shield > 0 ? `护盾 -${absorbed.toFixed(0)}` : "护盾破碎", x: enemy.x, y: enemy.y - enemy.radius - 12, life: .62, color: "#9cecff", size: 13, velocityY: -22 });
+      if (enemy.shield <= 0) shockwave(enemy.x, enemy.y, "#72c9df", 10);
+      if (amount <= 0) return;
+    }
+    const guardian = guardianFor(enemy);
+    if (guardian) {
+      amount *= .45;
+      if (enemy.guardTextCooldown <= 0) {
+        enemy.guardTextCooldown = .45;
+        game.texts.push({ text: "护持减伤", x: enemy.x, y: enemy.y - enemy.radius - 10, life: .5, color: "#9ee6c1", size: 12, velocityY: -18 });
+      }
+      directionalBurst(enemy.x, enemy.y, Math.atan2(guardian.y - enemy.y, guardian.x - enemy.x), "#75c89c", 4, 80);
+    }
+    const previousHp = enemy.hp;
+    enemy.hp -= amount;
+    enemy.flash = .12;
+    enemy.squash = Math.max(enemy.squash || 0, critical ? .72 : .38);
+    const statusTick = Boolean(source && source.statusTick);
+    if (!statusTick) hitStop = Math.max(hitStop, source && source.skill ? .055 : critical ? .045 : .018);
+    screenShake = Math.max(screenShake, statusTick ? 0 : source && source.skill ? 7 : critical ? 5 : 2.5);
+    const statusColors = { burn: "#f18a4f", poison: "#8dcb68", bleed: "#df5570", shock: "#c9b6ff" };
     game.texts.push({
       text: `${critical ? "暴击 " : ""}${Math.max(.1, amount).toFixed(amount < 1 ? 1 : 0)}`,
       x: enemy.x + random(-8, 8), y: enemy.y - enemy.radius - 8,
-      life: critical ? .72 : .5, color: critical ? "#fff3a5" : "#f2c77f", size: critical ? 18 : 13,
+      life: critical ? .72 : .5, color: statusTick ? statusColors[source.statusType] : critical ? "#fff3a5" : "#f2c77f", size: statusTick ? 11 : critical ? 18 : 13,
       velocityY: critical ? -34 : -24
     });
-    if (source) {
+    if (source && !statusTick) {
       enemy.x += Math.cos(impactAngle) * (source.skill ? 18 : critical ? 8 : 4);
       enemy.y += Math.sin(impactAngle) * (source.skill ? 18 : critical ? 8 : 4);
     }
     if (critical) sound(410, .07, "square", .012);
+    applyAttackStatuses(enemy, source);
+    const sourceKey = statusTick ? `status:${source.statusType}` : source?.melee ? "cleaver" : source?.weapon || (source?.skill ? "skill" : "effect");
+    const dealt = Math.min(previousHp, amount);
+    game.damageDealt += dealt;
+    game.damageBySource[sourceKey] = (game.damageBySource[sourceKey] || 0) + dealt;
     if (enemy.hp <= 0) killEnemy(enemy);
   }
 
@@ -855,9 +1200,23 @@
       shockwave(bomb.x, bomb.y, "#f07a45", 22);
       if (distance(bomb, game.player) < 82) damagePlayer(2, bomb);
       for (const obstacle of game.obstacles) if (distance(bomb, obstacle) < 92) damageObstacle(obstacle, 8);
+      game.hazards.push({ x: bomb.x, y: bomb.y, radius: bomb.volatile ? 54 : 68, life: bomb.volatile ? 2.4 : 4.2, maxLife: bomb.volatile ? 2.4 : 4.2, phase: random(0, TAU), tick: .1, kind: bomb.volatile ? "爆裂遗骸" : "腐蚀地面" });
       screenShake = 11;
     }
     game.bombs = game.bombs.filter(bomb => !bomb.dead);
+  }
+
+  function updateHazards(dt) {
+    for (const hazard of game.hazards) {
+      hazard.life -= dt;
+      hazard.phase += dt * 3.2;
+      hazard.tick -= dt;
+      if (hazard.tick <= 0 && distance(hazard, game.player) < hazard.radius + game.player.radius) {
+        hazard.tick = .7;
+        damagePlayer(.5, hazard);
+      }
+    }
+    game.hazards = game.hazards.filter(hazard => hazard.life > 0);
   }
 
   function inBounds(bullet) {
@@ -868,11 +1227,17 @@
     const player = game.player;
     for (const enemy of game.enemies) {
       if (enemy.dead) continue;
-      enemy.cooldown -= dt;
+      updateEnemyStatuses(enemy, dt);
+      if (enemy.dead) continue;
+      if (isBoss(enemy) && updateBossStage(enemy, dt)) continue;
+      const startX = enemy.x;
+      const startY = enemy.y;
+      enemy.cooldown -= dt * (enemy.affix === "frenzied" ? 1.35 : 1);
       enemy.flash = Math.max(0, enemy.flash - dt);
       enemy.recoil *= Math.pow(.001, dt);
       enemy.attackFlash = Math.max(0, enemy.attackFlash - dt);
       enemy.squash *= Math.pow(.004, dt);
+      enemy.guardTextCooldown = Math.max(0, enemy.guardTextCooldown - dt);
       enemy.phase += dt * (isBoss(enemy) ? 1.5 : .8);
       const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
       enemy.angle = angle;
@@ -950,8 +1315,24 @@
           enemy.y += Math.sin(orbit) * enemy.speed * .55 * dt;
         }
         if (enemy.cooldown <= 0) {
-          radialFire(enemy, enemy.elite ? 8 : 6);
-          enemy.cooldown = enemy.elite ? 1.45 : 2.1;
+          const activeSummons = game.enemies.filter(candidate => !candidate.dead && candidate.summonedBy === enemy.id).length;
+          if (enemy.summons < 2 && activeSummons < 2 && game.enemies.filter(candidate => !candidate.dead).length < 10) {
+            spawnEnemy("leech");
+            const summon = game.enemies.at(-1);
+            const summonAngle = enemy.phase + enemy.summons * Math.PI;
+            summon.x = clamp(enemy.x + Math.cos(summonAngle) * 46, WALL + summon.radius, ROOM_WIDTH - WALL - summon.radius);
+            summon.y = clamp(enemy.y + Math.sin(summonAngle) * 46, WALL + summon.radius, ROOM_HEIGHT - WALL - summon.radius);
+            summon.hp = Math.max(1, Math.ceil(summon.hp * .65));
+            summon.maxHp = summon.hp;
+            summon.summonedBy = enemy.id;
+            enemy.summons += 1;
+            shockwave(summon.x, summon.y, "#9d72c2", 8);
+            game.texts.push({ text: "召唤血蛭", x: enemy.x, y: enemy.y - 34, life: .72, color: "#c9a4ef", size: 13, velocityY: -18 });
+            enemy.cooldown = enemy.elite ? 2.2 : 2.8;
+          } else {
+            radialFire(enemy, enemy.elite ? 8 : 6);
+            enemy.cooldown = enemy.elite ? 1.45 : 2.1;
+          }
         }
       } else if (enemy.type === "bomber") {
         if (playerDistance > 245) {
@@ -965,6 +1346,8 @@
         }
       } else if (enemy.type === "bossBrood") {
         updateBrood(enemy, angle, playerDistance, dt);
+      } else if (enemy.type === "bossWarden") {
+        updateWarden(enemy, angle, playerDistance, dt);
       } else if (enemy.type === "bossHeart") {
         updateHeart(enemy, angle, dt);
       } else {
@@ -979,6 +1362,10 @@
           enemy.cooldown = enemy.hp < enemy.maxHp * .5 ? .8 : 1.15;
         }
       }
+      if (enemy.statuses.freeze > 0) {
+        enemy.x = startX + (enemy.x - startX) * .45;
+        enemy.y = startY + (enemy.y - startY) * .45;
+      }
       enemy.x = clamp(enemy.x, WALL + enemy.radius, ROOM_WIDTH - WALL - enemy.radius);
       enemy.y = clamp(enemy.y, WALL + enemy.radius, ROOM_HEIGHT - WALL - enemy.radius);
       resolveObstacleCollision(enemy);
@@ -988,45 +1375,103 @@
     game.enemies = game.enemies.filter(enemy => !enemy.dead);
   }
 
+  function updateBossStage(enemy, dt) {
+    const healthRatio = enemy.hp / enemy.maxHp;
+    const nextStage = healthRatio <= .33 ? 3 : healthRatio <= .67 ? 2 : 1;
+    if (nextStage > enemy.bossStage) {
+      enemy.bossStage = nextStage;
+      enemy.stageTransition = .9;
+      enemy.cooldown = 1.05;
+      enemy.spawnCooldown = Math.min(enemy.spawnCooldown, 1.2);
+      enemy.squash = 1;
+      game.enemyBullets.length = 0;
+      if (enemy.type === "bossWarden" && nextStage === 2) {
+        enemy.shield = 12 + game.rooms[game.room].chapter * 3;
+        enemy.maxShield = enemy.shield;
+      }
+      shockwave(enemy.x, enemy.y, nextStage === 3 ? "#ef664e" : "#d8ac64", 28);
+      screenShake = 13;
+      const label = bossStageNames[enemy.type][nextStage - 1];
+      game.texts.push({ text: `阶段 ${nextStage} · ${label}`, x: ROOM_WIDTH / 2, y: 128, life: 2.2, color: nextStage === 3 ? "#ff8269" : "#f5d28a" });
+    }
+    if (enemy.stageTransition > 0) {
+      enemy.stageTransition -= dt;
+      enemy.phase += dt * 4;
+      return true;
+    }
+    return false;
+  }
+
   function updateBrood(enemy, angle, playerDistance, dt) {
+    const stage = enemy.bossStage;
     enemy.spawnCooldown -= dt;
+    enemy.hazardCooldown -= dt;
     if (enemy.charge > 0) {
-      enemy.x += Math.cos(enemy.chargeAngle) * enemy.speed * 4.2 * dt;
-      enemy.y += Math.sin(enemy.chargeAngle) * enemy.speed * 4.2 * dt;
+      enemy.x += Math.cos(enemy.chargeAngle) * enemy.speed * (stage === 3 ? 5.2 : 4.2) * dt;
+      enemy.y += Math.sin(enemy.chargeAngle) * enemy.speed * (stage === 3 ? 5.2 : 4.2) * dt;
       enemy.charge -= dt;
     } else if (enemy.windup > 0) {
       enemy.windup -= dt;
       if (enemy.windup <= 0) enemy.charge = .7;
     } else if (enemy.cooldown <= 0) {
       enemy.chargeAngle = angle;
-      enemy.windup = .55;
-      enemy.cooldown = 2.2;
+      enemy.windup = stage === 3 ? .38 : .55;
+      enemy.cooldown = stage === 3 ? 1.45 : 2.2;
     } else if (playerDistance > 150) {
       enemy.x += Math.cos(angle) * enemy.speed * .45 * dt;
       enemy.y += Math.sin(angle) * enemy.speed * .45 * dt;
     }
-    if (enemy.spawnCooldown <= 0 && game.enemies.length < 9) {
+    if (stage >= 2 && enemy.spawnCooldown <= 0 && game.enemies.length < 9) {
       spawnEnemy("bat");
-      if (enemy.hp < enemy.maxHp * .5) spawnEnemy("bat");
-      enemy.spawnCooldown = enemy.hp < enemy.maxHp * .5 ? 3.5 : 5;
+      if (stage === 3) spawnEnemy("leech");
+      enemy.spawnCooldown = stage === 3 ? 3.1 : 4.4;
       game.texts.push({ text: "腐巢孵化", x: enemy.x, y: enemy.y - 46, life: 1.2 });
+    }
+    if (stage === 3 && enemy.hazardCooldown <= 0) {
+      game.bombs.push({ x: game.player.x + random(-55, 55), y: game.player.y + random(-55, 55), timer: .9, pulse: 0, radius: 12 });
+      enemy.hazardCooldown = 2.5;
     }
   }
 
+  function updateWarden(enemy, angle, playerDistance, dt) {
+    const stage = enemy.bossStage;
+    const orbit = angle + (stage >= 2 ? Math.PI / 2 : Math.sin(enemy.phase) * .65);
+    if (playerDistance > (stage === 3 ? 145 : 185)) {
+      enemy.x += Math.cos(orbit) * enemy.speed * (stage === 3 ? 1.35 : .85) * dt;
+      enemy.y += Math.sin(orbit) * enemy.speed * (stage === 3 ? 1.35 : .85) * dt;
+    }
+    if (stage === 3) game.arenaInset = Math.min(82, game.arenaInset + dt * 18);
+    if (enemy.cooldown > 0) return;
+    if (stage === 1) enemyFire(enemy, 5, .16);
+    else if (stage === 2) radialFireAtSpeed(enemy, 10, 170, enemy.phase);
+    else {
+      radialFireAtSpeed(enemy, 14, 205, enemy.phase * 1.4);
+      enemyFire(enemy, 5, .13);
+    }
+    enemy.cooldown = stage === 1 ? 1.15 : stage === 2 ? .92 : .72;
+  }
+
   function updateHeart(enemy, angle, dt) {
+    const stage = enemy.bossStage;
     enemy.spawnCooldown -= dt;
+    enemy.waveCooldown -= dt;
     const targetX = ROOM_WIDTH / 2 + Math.cos(enemy.phase * .55) * 155;
     const targetY = ROOM_HEIGHT / 2 + Math.sin(enemy.phase * .8) * 105;
-    enemy.x += (targetX - enemy.x) * dt * 1.8;
-    enemy.y += (targetY - enemy.y) * dt * 1.8;
+    enemy.x += (targetX - enemy.x) * dt * (stage === 3 ? 2.8 : 1.8);
+    enemy.y += (targetY - enemy.y) * dt * (stage === 3 ? 2.8 : 1.8);
     if (enemy.cooldown <= 0) {
-      if (enemy.hp < enemy.maxHp * .55) {
-        radialFire(enemy, 16);
+      if (stage >= 2) {
+        radialFireAtSpeed(enemy, stage === 3 ? 20 : 16, stage === 3 ? 215 : 170);
         enemy.phase += .28;
       } else {
         enemyFire(enemy, 9, .13);
       }
-      enemy.cooldown = enemy.hp < enemy.maxHp * .55 ? .72 : 1.05;
+      enemy.cooldown = stage === 3 ? .54 : stage === 2 ? .78 : 1.05;
+    }
+    if (stage >= 2 && enemy.waveCooldown <= 0) {
+      spawnBossWave(enemy.x, enemy.y, stage === 3 ? 250 : 205);
+      enemy.waveCooldown = stage === 3 ? 1.7 : 2.5;
+      game.texts.push({ text: "心跳冲击 · 翻滚穿越", x: ROOM_WIDTH / 2, y: 126, life: 1.25, color: "#ef7897", size: 16 });
     }
     if (enemy.spawnCooldown <= 0) {
       const oldX = enemy.x;
@@ -1035,8 +1480,26 @@
       enemy.y = random(110, ROOM_HEIGHT - 110);
       burst(oldX, oldY, "#a56891", 18, 150);
       burst(enemy.x, enemy.y, "#e986a8", 18, 150);
-      enemy.spawnCooldown = 4.2;
+      enemy.spawnCooldown = stage === 3 ? 2.4 : 4.2;
     }
+  }
+
+  function spawnBossWave(x, y, speed) {
+    game.bossWaves.push({ x, y, radius: 18, maxRadius: 430, speed, hit: false, life: 2.4, maxLife: 2.4, kind: "心跳冲击" });
+    shockwave(x, y, "#df5877", 12);
+  }
+
+  function updateBossWaves(dt) {
+    for (const wave of game.bossWaves) {
+      wave.radius += wave.speed * dt;
+      wave.life -= dt;
+      const playerDistance = distance(wave, game.player);
+      if (!wave.hit && Math.abs(playerDistance - wave.radius) < game.player.radius + 8) {
+        wave.hit = true;
+        damagePlayer(1, wave);
+      }
+    }
+    game.bossWaves = game.bossWaves.filter(wave => wave.life > 0 && wave.radius < wave.maxRadius);
   }
 
   function separateEnemies() {
@@ -1120,7 +1583,10 @@
       if (pickup.type === "item") {
         if (pickup.price) game.player.coins -= pickup.price;
         grantItem(pickup.item);
-        if (pickup.choiceGroup) game.pickups.forEach(candidate => { if (candidate.choiceGroup === pickup.choiceGroup && candidate !== pickup) candidate.dead = true; });
+        if (pickup.choiceGroup) {
+          game.pickups.forEach(candidate => { if (candidate.choiceGroup === pickup.choiceGroup && candidate !== pickup) candidate.dead = true; });
+          if (game.rooms[game.room].kind === "treasure" && game.room < game.rooms.length - 1) openRouteChoice();
+        }
       }
       burst(pickup.x, pickup.y, "#74d69b", 12, 120);
       sound(pickup.type === "item" ? 520 : 680, pickup.type === "item" ? .2 : .08, "sine", .018);
@@ -1128,12 +1594,51 @@
     game.pickups = game.pickups.filter(pickup => !pickup.dead);
   }
 
+  function openRouteChoice() {
+    if (game.routeChoice || game.rooms[game.room].routeSelected) return;
+    game.doorOpen = false;
+    game.routeChoice = {
+      options: [
+        { id: "safe", name: "守烛小径", detail: "下一房间无战斗，恢复 1½ 颗心并获得护盾", color: "#79bd91" },
+        { id: "risk", name: "双誓险路", detail: "强化诅咒精英，额外遗物与 4 枚弹壳币", color: "#dc715d" }
+      ]
+    };
+    game.texts.push({ text: "选择前路 · 1 / 2", x: ROOM_WIDTH / 2, y: 116, life: 2.2 });
+  }
+
+  function chooseRoute(choice) {
+    if (!game || !game.routeChoice) return false;
+    const option = game.routeChoice.options.find(candidate => candidate.id === choice);
+    const nextRoom = game.rooms[game.room + 1];
+    if (!option || !nextRoom) return false;
+    game.rooms[game.room].routeSelected = option.id;
+    game.rooms[game.room].cleared = true;
+    game.routeChoices += 1;
+    if (option.id === "safe") {
+      nextRoom.kind = "sanctuary";
+      nextRoom.name = "守烛圣所";
+      nextRoom.enemies = [];
+      nextRoom.modifier = null;
+      game.texts.push({ text: "选择守烛小径 · 稳妥休整", x: ROOM_WIDTH / 2, y: 132, life: 1.8, color: option.color });
+    } else {
+      nextRoom.kind = "elite";
+      nextRoom.name = "双誓刑场";
+      nextRoom.modifier = "cursed";
+      nextRoom.riskReward = 2;
+      game.texts.push({ text: "选择双誓险路 · 高危高报酬", x: ROOM_WIDTH / 2, y: 132, life: 1.8, color: option.color });
+    }
+    game.routeChoice = null;
+    game.doorOpen = true;
+    sound(option.id === "risk" ? 115 : 390, .22, option.id === "risk" ? "sawtooth" : "sine", .02);
+    return true;
+  }
+
   function grantItem(item) {
     item.apply(game.player);
     game.itemsFound += 1;
     game.itemStacks[item.id] = (game.itemStacks[item.id] || 0) + 1;
     updateSynergies();
-    game.texts.push({ text: `${item.icon} ${item.name} · ${item.detail}`, x: ROOM_WIDTH / 2, y: 122, life: 2.8 });
+    game.texts.push({ text: `${item.icon} ${item.name} · ${item.detail}`, x: ROOM_WIDTH / 2, y: 122, life: 2.8, color: item.cursed ? "#ed7793" : "#ffe09a", size: 16 });
   }
 
   function updateSynergies() {
@@ -1170,6 +1675,13 @@
   }
 
   function finish(won) {
+    if (!game.metaRecorded) {
+      game.metaRecorded = true;
+      metaProgress.runs += 1;
+      if (won) metaProgress.wins += 1;
+      metaProgress.bestKills = Math.max(metaProgress.bestKills, game.kills);
+      saveMetaProgress();
+    }
     game.state = "ended";
     game.outcome = won ? "victory" : "defeat";
     touchUi.classList.remove("active");
@@ -1177,7 +1689,12 @@
     document.querySelector("#end-title").textContent = won ? "地牢已净化" : "你倒在了门前";
     const seconds = Math.floor(game.elapsed % 60).toString().padStart(2, "0");
     const minutes = Math.floor(game.elapsed / 60);
-    document.querySelector("#end-stats").innerHTML = `<span>${heroes[game.player.hero].name}</span><span>击败 ${game.kills}</span><span>Boss ${game.bossKills}/3</span><span>遗物 ${game.itemsFound}</span><span>无伤房 ${game.perfectRooms}</span><span>拆解 ${game.destroyedProps}</span><span>存活 ${minutes}:${seconds}</span><span>关卡 ${game.room + 1}/${game.rooms.length}</span>`;
+    const sourceLabels = { repeater: "连弩", scatter: "霰火", wisp: "游魂", cleaver: "祭刃", skill: "技能", effect: "连锁", "status:burn": "燃烧", "status:poison": "中毒", "status:bleed": "流血", "status:shock": "感电" };
+    const topSource = Object.entries(game.damageBySource).sort((left, right) => right[1] - left[1])[0];
+    const damageSummary = topSource ? `${sourceLabels[topSource[0]] || topSource[0]} ${Math.round(topSource[1])}` : "无";
+    const deathSummary = won ? "完成净化" : game.lastDamageSource;
+    const unlockSummary = game.unlocks.length ? `<span>新解锁 ${game.unlocks.join(" / ")}</span>` : "";
+    document.querySelector("#end-stats").innerHTML = `<span>${heroes[game.player.hero].name} · ${weaponNames[game.player.weapon]}</span><span>击败 ${game.kills}</span><span>Boss ${game.bossKills}/3</span><span>遗物 ${game.itemsFound}</span><span>无伤房 ${game.perfectRooms}</span><span>总伤害 ${Math.round(game.damageDealt)}</span><span>主力输出 ${damageSummary}</span><span>承受伤害 ${game.damageTaken.toFixed(1)}</span><span>${won ? "结局" : "死因"} ${deathSummary}</span><span>存活 ${minutes}:${seconds}</span><span>关卡 ${game.room + 1}/${game.rooms.length}</span>${unlockSummary}`;
     endScreen.classList.add("visible");
   }
 
@@ -1188,19 +1705,26 @@
     const shakeY = random(-screenShake, screenShake);
     context.translate(offsetX + shakeX, offsetY + shakeY);
     context.scale(scale, scale);
-      drawRoom();
-      if (game) {
-        drawObstacles();
-        drawPickups();
-        drawBombs();
-        drawThreatTelegraphs();
-        drawBullets();
+    drawRoom();
+    if (game) {
+      drawBossArena();
+      drawBossWaves();
+      drawHazards();
+      drawGuardianLinks();
+      drawObstacles();
+      drawPickups();
+      drawBombs();
+      drawThreatTelegraphs();
+      drawBullets();
+      drawSlashes();
       drawEnemies();
+      drawFamiliars();
       drawPlayer();
       drawParticles();
       drawAtmosphere();
       drawHud();
       drawTexts();
+      if (game.routeChoice) drawRouteChoice();
       if (game.transition > 0) {
         context.fillStyle = `rgba(0,0,0,${game.transition})`;
         context.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
@@ -1269,6 +1793,34 @@
     drawDoor(WALL - 4, ROOM_HEIGHT / 2, false);
     drawDoor(ROOM_WIDTH - WALL + 4, ROOM_HEIGHT / 2, game ? game.doorOpen : false);
     drawTorches(palette);
+  }
+
+  function drawBossArena() {
+    if (game.arenaInset <= 0) return;
+    const inset = WALL + game.arenaInset;
+    context.fillStyle = "rgba(28, 7, 10, .52)";
+    context.fillRect(WALL, WALL, ROOM_WIDTH - WALL * 2, game.arenaInset);
+    context.fillRect(WALL, ROOM_HEIGHT - inset, ROOM_WIDTH - WALL * 2, game.arenaInset);
+    context.fillRect(WALL, inset, game.arenaInset, ROOM_HEIGHT - inset * 2);
+    context.fillRect(ROOM_WIDTH - inset, inset, game.arenaInset, ROOM_HEIGHT - inset * 2);
+    context.strokeStyle = `rgba(239, 91, 62, ${.55 + Math.sin(game.elapsed * 8) * .18})`;
+    context.lineWidth = 4;
+    context.strokeRect(inset, inset, ROOM_WIDTH - inset * 2, ROOM_HEIGHT - inset * 2);
+  }
+
+  function drawBossWaves() {
+    for (const wave of game.bossWaves) {
+      const fade = clamp(wave.life / .6, 0, 1);
+      context.strokeStyle = `rgba(239, 88, 119, ${.58 * fade})`;
+      context.lineWidth = 10;
+      context.shadowColor = "#b62857";
+      context.shadowBlur = 14;
+      context.beginPath(); context.arc(wave.x, wave.y, wave.radius, 0, TAU); context.stroke();
+      context.strokeStyle = `rgba(255, 199, 187, ${.72 * fade})`;
+      context.lineWidth = 2;
+      context.beginPath(); context.arc(wave.x, wave.y, wave.radius, 0, TAU); context.stroke();
+      context.shadowBlur = 0;
+    }
   }
 
   function drawFloorMarks(seed, palette) {
@@ -1590,12 +2142,27 @@
       context.beginPath(); context.ellipse(1, -31, 17, 5, 0, 0, TAU); context.stroke();
       context.globalAlpha = 1;
     }
-    context.fillStyle = "#6f5437";
     context.strokeStyle = "#21181a";
     context.lineWidth = 3;
-    roundedRect(17, -4, 20, 8, 3); context.fill(); context.stroke();
-    context.fillStyle = "#e2b55d";
-    context.fillRect(31, -2, 8, 4);
+    if (player.weapon === "cleaver") {
+      context.fillStyle = "#b8b7ad";
+      context.beginPath(); context.moveTo(18, -4); context.lineTo(49, -12); context.lineTo(42, 3); context.lineTo(18, 5); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#7e4838"; roundedRect(12, -3, 15, 7, 3); context.fill(); context.stroke();
+    } else if (player.weapon === "wisp") {
+      context.strokeStyle = "#826da8";
+      context.lineWidth = 5;
+      context.beginPath(); context.moveTo(15, 3); context.lineTo(34, -4); context.stroke();
+      context.fillStyle = "#bba6e9";
+      context.shadowColor = "#8e6dda";
+      context.shadowBlur = 10;
+      context.beginPath(); context.arc(38, -6, 6, 0, TAU); context.fill();
+      context.shadowBlur = 0;
+    } else {
+      context.fillStyle = player.weapon === "scatter" ? "#87503d" : "#6f5437";
+      roundedRect(17, player.weapon === "scatter" ? -6 : -4, player.weapon === "scatter" ? 26 : 20, player.weapon === "scatter" ? 12 : 8, 3); context.fill(); context.stroke();
+      context.fillStyle = "#e2b55d";
+      context.fillRect(player.weapon === "scatter" ? 37 : 31, -2, player.weapon === "scatter" ? 11 : 8, 4);
+    }
     if (player.muzzleFlash > 0) {
       const flash = 8 + player.muzzleFlash * 95;
       context.fillStyle = "#fff1a6";
@@ -1622,10 +2189,24 @@
       context.translate(-enemy.recoil, 0);
       context.scale(1 + enemy.squash * .12, 1 - enemy.squash * .1);
       if (enemy.elite) {
-        context.strokeStyle = "#f0b85c";
+        context.strokeStyle = eliteAffixes[enemy.affix].color;
         context.lineWidth = 3;
         context.globalAlpha = .42 + Math.sin(game.elapsed * 5 + enemy.id) * .12;
         context.beginPath(); context.arc(0, 0, enemy.radius + 8, 0, TAU); context.stroke();
+        context.globalAlpha = 1;
+      }
+      if (enemy.type === "splitter") {
+        context.strokeStyle = "#73c48f";
+        context.lineWidth = 2;
+        context.globalAlpha = .26 + Math.sin(game.elapsed * 4 + enemy.id) * .08;
+        context.beginPath(); context.arc(0, 0, enemy.radius + 13, 0, TAU); context.stroke();
+        context.globalAlpha = 1;
+      }
+      if (enemy.shield > 0) {
+        context.strokeStyle = "#84dff3";
+        context.lineWidth = 4;
+        context.globalAlpha = .48 + Math.sin(game.elapsed * 7 + enemy.id) * .16;
+        context.beginPath(); context.arc(0, 0, enemy.radius + 11, -.35, TAU - .35); context.stroke();
         context.globalAlpha = 1;
       }
       context.fillStyle = "#100c10aa";
@@ -1654,8 +2235,50 @@
         context.shadowBlur = 0;
       }
       context.restore();
+      if (enemy.elite) {
+        const affix = eliteAffixes[enemy.affix];
+        context.textAlign = "center";
+        context.font = "900 10px system-ui";
+        context.fillStyle = affix.color;
+        context.strokeStyle = "#171116";
+        context.lineWidth = 3;
+        const label = `${affix.glyph} ${affix.name}`;
+        context.strokeText(label, enemy.x, enemy.y - enemy.radius - 19);
+        context.fillText(label, enemy.x, enemy.y - enemy.radius - 19);
+        context.textAlign = "left";
+      }
+      const statusEntries = [
+        ["burn", "♨", "#f18a4f"], ["freeze", "❄", "#8fe0ef"], ["poison", "●", "#8dcb68"],
+        ["bleed", "▼", "#df5570"], ["shock", "ϟ", "#c9b6ff"]
+      ].filter(entry => enemy.statuses[entry[0]] > 0);
+      statusEntries.forEach((entry, index) => {
+        const x = enemy.x + (index - (statusEntries.length - 1) / 2) * 13;
+        context.fillStyle = "#171116cc";
+        context.beginPath(); context.arc(x, enemy.y + enemy.radius + 12, 6, 0, TAU); context.fill();
+        context.fillStyle = entry[2];
+        context.font = "900 9px system-ui";
+        context.textAlign = "center";
+        context.fillText(entry[1], x, enemy.y + enemy.radius + 15);
+      });
+      context.textAlign = "left";
       if (!["grunt", "bat", "leech"].includes(enemy.type)) drawHealthBar(enemy);
     }
+  }
+
+  function drawGuardianLinks() {
+    context.save();
+    context.lineWidth = 2;
+    context.setLineDash([6, 7]);
+    for (const enemy of game.enemies) {
+      if (enemy.dead || isBoss(enemy)) continue;
+      const guardian = guardianFor(enemy);
+      if (!guardian) continue;
+      const pulse = .18 + Math.sin(game.elapsed * 5 + enemy.id) * .06;
+      context.strokeStyle = guardian.affix === "warded" ? `rgba(112, 197, 221, ${pulse})` : `rgba(115, 196, 143, ${pulse})`;
+      context.beginPath(); context.moveTo(guardian.x, guardian.y); context.lineTo(enemy.x, enemy.y); context.stroke();
+    }
+    context.setLineDash([]);
+    context.restore();
   }
 
   function drawObstacles() {
@@ -1712,6 +2335,29 @@
       context.fillStyle = warning > .7 ? "#fff0b0" : "#e85e43";
       context.beginPath(); context.arc(4, -5, 3, 0, TAU); context.fill();
       context.restore();
+    }
+  }
+
+  function drawHazards() {
+    for (const hazard of game.hazards) {
+      const fade = clamp(hazard.life / Math.min(.8, hazard.maxLife), 0, 1);
+      const pulse = Math.sin(hazard.phase) * 3;
+      const gradient = context.createRadialGradient(hazard.x, hazard.y, 5, hazard.x, hazard.y, hazard.radius + pulse);
+      gradient.addColorStop(0, `rgba(111, 37, 38, ${.42 * fade})`);
+      gradient.addColorStop(.68, `rgba(94, 40, 34, ${.3 * fade})`);
+      gradient.addColorStop(1, "rgba(67, 23, 28, 0)");
+      context.fillStyle = gradient;
+      context.beginPath(); context.arc(hazard.x, hazard.y, hazard.radius + pulse, 0, TAU); context.fill();
+      context.strokeStyle = `rgba(229, 92, 60, ${.38 * fade})`;
+      context.lineWidth = 2;
+      context.beginPath(); context.arc(hazard.x, hazard.y, hazard.radius * .84 + pulse, 0, TAU); context.stroke();
+      context.fillStyle = `rgba(53, 21, 23, ${.42 * fade})`;
+      for (let index = 0; index < 5; index += 1) {
+        const angle = hazard.phase * .2 + index / 5 * TAU;
+        context.beginPath();
+        context.arc(hazard.x + Math.cos(angle) * hazard.radius * .48, hazard.y + Math.sin(angle) * hazard.radius * .34, 4 + index % 2 * 2, 0, TAU);
+        context.fill();
+      }
     }
   }
 
@@ -2032,8 +2678,50 @@
       context.fillStyle = "#e9d4b0";
       context.font = "800 12px system-ui";
       context.textAlign = "center";
-      context.fillText(game.rooms[game.room].name, ROOM_WIDTH / 2, y - 7);
+      context.fillText(`${game.rooms[game.room].name} · 阶段 ${enemy.bossStage} ${bossStageNames[enemy.type][enemy.bossStage - 1]}`, ROOM_WIDTH / 2, y - 7);
       context.textAlign = "left";
+    }
+  }
+
+  function drawSlashes() {
+    for (const slash of game.slashes) {
+      const progress = 1 - slash.life / slash.maxLife;
+      const startAngle = slash.angle - slash.arc / 2 + progress * .22;
+      const endAngle = slash.angle + slash.arc / 2 + progress * .22;
+      context.save();
+      context.globalAlpha = clamp(slash.life / slash.maxLife, 0, 1);
+      context.strokeStyle = slash.critical ? "#fff2a1" : "#d8d1bd";
+      context.shadowColor = slash.critical ? "#f1a647" : "#9a806d";
+      context.shadowBlur = slash.critical ? 18 : 9;
+      context.lineWidth = 12 * (1 - progress * .45);
+      context.lineCap = "round";
+      context.beginPath(); context.arc(slash.x, slash.y, slash.radius * (.62 + progress * .28), startAngle, endAngle); context.stroke();
+      context.strokeStyle = "#fff7dc";
+      context.lineWidth = 2;
+      context.beginPath(); context.arc(slash.x, slash.y, slash.radius * (.68 + progress * .28), startAngle, endAngle); context.stroke();
+      context.restore();
+    }
+  }
+
+  function drawFamiliars() {
+    const player = game.player;
+    if (player.weapon !== "wisp" || player.familiars <= 0) return;
+    for (let index = 0; index < player.familiars; index += 1) {
+      const angle = player.familiarPhase + index / player.familiars * TAU;
+      const x = player.x + Math.cos(angle) * 34;
+      const y = player.y + Math.sin(angle) * 24;
+      context.save();
+      context.translate(x, y);
+      context.shadowColor = "#a98be5";
+      context.shadowBlur = 14;
+      context.fillStyle = "#c9b2f2";
+      context.beginPath(); context.arc(0, 0, 7, 0, TAU); context.fill();
+      context.fillStyle = "#f3e6ff";
+      context.beginPath(); context.arc(-2, -2, 2.5, 0, TAU); context.fill();
+      context.strokeStyle = "#4b3b63";
+      context.lineWidth = 2;
+      context.beginPath(); context.arc(0, 0, 8, 0, TAU); context.stroke();
+      context.restore();
     }
   }
 
@@ -2066,7 +2754,7 @@
 
   function drawBullets() {
     for (const bullet of game.bullets) {
-      const bulletColor = bullet.coin ? "#ffe079" : bullet.chain ? "#d6c4ff" : bullet.explosion ? "#ffc079" : bullet.critical ? "#fffbd1" : "#fff0a6";
+      const bulletColor = bullet.weapon === "wisp" ? "#d7c4ff" : bullet.weapon === "scatter" ? "#ffc07a" : bullet.coin ? "#ffe079" : bullet.chain ? "#d6c4ff" : bullet.explosion ? "#ffc079" : bullet.critical ? "#fffbd1" : "#fff0a6";
       context.save();
       context.strokeStyle = bulletColor;
       context.globalAlpha = bullet.critical ? .72 : .48;
@@ -2372,7 +3060,7 @@
     drawHudPanel(x, y, 190, 38);
     context.fillStyle = hero.color;
     context.font = "900 11px system-ui";
-    context.fillText(`${hero.name} · ${hero.path}`, x + 12, y + 16);
+    context.fillText(`${hero.name} · ${weaponNames[player.weapon]} Lv.${player.weaponLevel}`, x + 12, y + 16);
     context.fillStyle = "#44383d";
     context.fillRect(x + 12, y + 24, 164, 5);
     context.fillStyle = player.skillCooldown <= 0 ? "#efd06e" : hero.color;
@@ -2425,6 +3113,46 @@
     context.textAlign = "left";
   }
 
+  function drawRouteChoice() {
+    context.fillStyle = "rgba(10, 7, 11, .9)";
+    context.fillRect(WALL, WALL, ROOM_WIDTH - WALL * 2, ROOM_HEIGHT - WALL * 2);
+    context.textAlign = "center";
+    context.fillStyle = "#f3dfb6";
+    context.font = "900 30px system-ui";
+    context.fillText("前路需要代价", ROOM_WIDTH / 2, 132);
+    context.fillStyle = "#aa9987";
+    context.font = "700 13px system-ui";
+    context.fillText("选择安全恢复，或接受强化精英以争取额外构筑", ROOM_WIDTH / 2, 158);
+    game.routeChoice.options.forEach((option, index) => {
+      const x = index === 0 ? 176 : 504;
+      const y = 190;
+      const widthValue = 280;
+      const heightValue = 180;
+      const glow = context.createLinearGradient(x, y, x, y + heightValue);
+      glow.addColorStop(0, `${option.color}4d`);
+      glow.addColorStop(1, "rgba(24, 18, 22, .96)");
+      context.fillStyle = glow;
+      context.strokeStyle = option.color;
+      context.lineWidth = 3;
+      roundedRect(x, y, widthValue, heightValue, 12);
+      context.fill(); context.stroke();
+      context.fillStyle = option.color;
+      context.font = "900 15px system-ui";
+      context.fillText(`${index + 1}`, x + widthValue / 2, y + 30);
+      context.fillStyle = "#f5e5c6";
+      context.font = "900 23px system-ui";
+      context.fillText(option.name, x + widthValue / 2, y + 76);
+      context.fillStyle = "#c9b9a4";
+      context.font = "700 13px system-ui";
+      const details = option.detail.split("，");
+      details.forEach((detail, line) => context.fillText(detail, x + widthValue / 2, y + 112 + line * 23));
+      context.fillStyle = option.color;
+      context.font = "800 12px system-ui";
+      context.fillText(index === 0 ? "低风险 · 稳定续航" : "高风险 · 双倍遗物", x + widthValue / 2, y + 158);
+    });
+    context.textAlign = "left";
+  }
+
   function frame(time) {
     const dt = Math.min((time - lastTime) / 1000 || 0, .033);
     lastTime = time;
@@ -2453,6 +3181,11 @@
 
   function handleKeyDown(event) {
     const code = normalizedCode(event);
+    if (game && game.routeChoice && ["Digit1", "Digit2"].includes(code)) {
+      event.preventDefault();
+      chooseRoute(code === "Digit1" ? "safe" : "risk");
+      return;
+    }
     if (!["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(code)) return;
     event.preventDefault();
     keys.add(code);
@@ -2485,6 +3218,13 @@
     pointer.x = point.x; pointer.y = point.y; pointer.active = event.pointerType === "mouse";
   });
   canvas.addEventListener("pointerdown", event => {
+    const point = toRoom(event.clientX, event.clientY);
+    if (game && game.routeChoice && point.y >= 180 && point.y <= 390) {
+      if (point.x >= 176 && point.x <= 456) chooseRoute("safe");
+      if (point.x >= 504 && point.x <= 784) chooseRoute("risk");
+      event.preventDefault();
+      return;
+    }
     if (event.pointerType !== "mouse") return;
     canvas.focus({ preventScroll: true });
     if (event.button === 0) pointer.down = true;
@@ -2529,6 +3269,12 @@
     document.querySelectorAll(".hero-card").forEach(card => card.classList.remove("selected"));
     button.classList.add("selected");
   }));
+  document.querySelectorAll(".weapon-card").forEach(button => button.addEventListener("click", () => {
+    if (!isWeaponUnlocked(button.dataset.weapon)) return;
+    selectedWeapon = button.dataset.weapon;
+    document.querySelectorAll(".weapon-card").forEach(card => card.classList.remove("selected"));
+    button.classList.add("selected");
+  }));
   document.querySelector("#start-button").addEventListener("click", newGame);
   document.querySelector("#restart-button").addEventListener("click", newGame);
 
@@ -2546,10 +3292,13 @@
         chapter: game.rooms[game.room].chapter + 1,
         floorRoom: game.rooms[game.room].floorRoom,
         roomKinds: game.rooms.map(room => room.kind),
+        routeChoice: game.routeChoice ? game.routeChoice.options.map(option => option.id) : null,
+        routeChoices: game.routeChoices,
+        chosenRoutes: game.rooms.map(room => room.routeSelected || null),
         plannedEnemyTypes: game.rooms.flatMap(room => room.enemies),
         enemyTypes: game.enemies.map(enemy => enemy.type),
         enemyHealth: game.enemies.map(enemy => enemy.hp),
-        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, type: enemy.type })),
+        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, statuses: { ...enemy.statuses } })),
         doorOpen: game.doorOpen,
         pickupTypes: game.pickups.map(pickup => pickup.type),
         hp: game.player.hp,
@@ -2573,6 +3322,13 @@
         synergies: { ...game.synergies },
         obstacles: game.obstacles.filter(obstacle => !obstacle.dead).length,
         bombs: game.bombs.length,
+        hazards: game.hazards.length,
+        slashes: game.slashes.length,
+        bossWaves: game.bossWaves.length,
+        arenaInset: game.arenaInset,
+        bossStage: game.enemies.find(enemy => isBoss(enemy))?.bossStage || 0,
+        eliteAffixes: { ...game.affixesSeen },
+        summonedEnemies: game.enemies.filter(enemy => enemy.summonedBy).length,
         coins: game.player.coins,
         skillCooldown: game.player.skillCooldown,
         feedback: {
@@ -2582,6 +3338,14 @@
           screenShake
         },
         itemsFound: game.itemsFound,
+        itemCatalogSize: items.length,
+        meta: { ...metaProgress },
+        runStats: {
+          damageDealt: game.damageDealt,
+          damageTaken: game.damageTaken,
+          damageBySource: { ...game.damageBySource },
+          lastDamageSource: game.lastDamageSource
+        },
         itemStacks: { ...game.itemStacks },
         flowCounts: Object.fromEntries(["destroy", "coin", "spell", "titan"].map(tag => [tag, items.filter(item => item.tag === tag && game.itemStacks[item.id]).length])),
         stats: {
@@ -2596,7 +3360,14 @@
           rollDelay: game.player.rollDelay,
           roomHeal: game.player.roomHeal,
           bulletSize: game.player.bulletSize,
-          armor: game.player.armor
+          armor: game.player.armor,
+          weapon: game.player.weapon,
+          weaponLevel: game.player.weaponLevel,
+          familiars: game.player.familiars,
+          statusChances: {
+            burn: game.player.burnChance, freeze: game.player.freezeChance, poison: game.player.poisonChance,
+            bleed: game.player.bleedChance, shock: game.player.shockChance
+          }
         }
       };
     },
@@ -2611,12 +3382,30 @@
       game.pickups.forEach(pickup => { pickup.x = game.player.x; pickup.y = game.player.y; });
     },
     exitRoom() {
-      if (!game || game.state !== "playing" || !game.doorOpen) return;
+      if (!game || game.state !== "playing") return;
+      if (game.routeChoice) chooseRoute("risk");
+      if (!game.doorOpen) return;
       game.player.x = ROOM_WIDTH - WALL - game.player.radius;
+    },
+    chooseRoute,
+    goToRoom(index) {
+      if (!game || game.state !== "playing" || !Number.isInteger(index) || index < 0 || index >= game.rooms.length) return;
+      enterRoom(index);
     },
     giveItem(id) {
       const item = items.find(candidate => candidate.id === id);
       if (game && item) grantItem(item);
+    },
+    inflictStatus(type, duration = 3) {
+      const enemy = game && game.enemies.find(candidate => !candidate.dead);
+      if (!enemy || !Object.hasOwn(enemy.statuses, type)) return;
+      enemy.statuses[type] = duration;
+      if (type === "bleed") enemy.bleedStacks = Math.max(1, enemy.bleedStacks || 0);
+    },
+    setBossHealthRatio(ratio) {
+      const boss = game && game.enemies.find(enemy => isBoss(enemy));
+      if (!boss) return;
+      boss.hp = Math.max(1, boss.maxHp * clamp(ratio, .01, 1));
     },
     hurt(amount = 1) {
       if (!game || game.state !== "playing") return;
@@ -2626,12 +3415,16 @@
     selectHero(id) {
       if (heroes[id]) selectedHero = id;
     },
+    selectWeapon(id) {
+      if (weaponNames[id]) selectedWeapon = id;
+    },
     useSkill() {
       activateSkill();
     }
   };
 
   resize();
+  updateMetaUi();
   if (window.location && window.location.search.includes("autostart=1")) newGame();
   requestAnimationFrame(frame);
 })();
