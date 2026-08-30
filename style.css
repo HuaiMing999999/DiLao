@@ -149,6 +149,26 @@ body { touch-action: none; }
 
 .screen.visible { display: grid; }
 
+.author-credit {
+  position: absolute;
+  right: max(22px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 2;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 12px;
+  border-right: 2px solid #c3944e;
+  color: #cbb895;
+  background: linear-gradient(90deg, transparent, #120f13b8);
+  text-shadow: 0 2px 5px #000;
+  pointer-events: none;
+}
+
+.author-credit span { font: 700 12px/1.2 system-ui; letter-spacing: .08em; }
+.author-credit b { color: #edc66f; font: 900 15px/1.1 Georgia, serif; letter-spacing: .2em; }
+
 .screen-panel {
   position: relative;
   width: min(880px, calc(100vw - 40px));
@@ -326,4 +346,7 @@ button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71382c; }
   .weapon-card { padding: 6px 5px; }
   h1 { font-size: clamp(48px, 16vw, 78px); }
   .screen-panel { padding: 36px 14px 20px; border-radius: 18px; }
+  .author-credit { right: 12px; bottom: 10px; padding: 6px 9px; }
+  .author-credit span { font-size: 10px; }
+  .author-credit b { font-size: 12px; }
 }

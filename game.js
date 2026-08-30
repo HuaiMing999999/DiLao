@@ -131,6 +131,7 @@
   let width = 0;
   let height = 0;
   let scale = 1;
+  let verticalScale = 1;
   let offsetX = 0;
   let offsetY = 0;
   let lastTime = 0;
@@ -552,9 +553,20 @@
     canvas.width = width * ratio;
     canvas.height = height * ratio;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    scale = Math.min(width / ROOM_WIDTH, height / ROOM_HEIGHT);
-    offsetX = (width - ROOM_WIDTH * scale) / 2;
-    offsetY = height > width ? Math.max(26, height * .08) : (height - ROOM_HEIGHT * scale) / 2;
+    const portrait = height > width && width <= 760;
+    if (portrait) {
+      scale = width / ROOM_WIDTH;
+      const topGutter = Math.max(48, height * .07);
+      const touchReserve = Math.min(190, height * .27);
+      verticalScale = Math.min(scale * 2, Math.max(scale, (height - topGutter - touchReserve) / ROOM_HEIGHT));
+      offsetX = 0;
+      offsetY = topGutter;
+    } else {
+      scale = Math.min(width / ROOM_WIDTH, height / ROOM_HEIGHT);
+      verticalScale = scale;
+      offsetX = (width - ROOM_WIDTH * scale) / 2;
+      offsetY = (height - ROOM_HEIGHT * verticalScale) / 2;
+    }
   }
 
   function newGame() {
@@ -2389,7 +2401,7 @@
     const shakeX = random(-screenShake, screenShake);
     const shakeY = random(-screenShake, screenShake);
     context.translate(offsetX + shakeX, offsetY + shakeY);
-    context.scale(scale, scale);
+    context.scale(scale, verticalScale);
     drawRoom();
     if (game) {
       drawBossArena();
@@ -4185,7 +4197,7 @@
   }
 
   function toRoom(clientX, clientY) {
-    return { x: (clientX - offsetX) / scale, y: (clientY - offsetY) / scale };
+    return { x: (clientX - offsetX) / scale, y: (clientY - offsetY) / verticalScale };
   }
 
   window.addEventListener("resize", resize);
@@ -4377,6 +4389,10 @@
         state: game.state,
         guideOpen,
         workshopOpen,
+        viewport: {
+          width, height, scaleX: scale, scaleY: verticalScale, offsetX, offsetY,
+          roomDisplayWidth: ROOM_WIDTH * scale, roomDisplayHeight: ROOM_HEIGHT * verticalScale
+        },
         outcome: game.outcome || null,
         room: game.room,
         roomCount: game.rooms.length,

@@ -4,7 +4,7 @@
 
 ## 在线试玩
 
-- EdgeOne Makers：<https://mcp.edgeone.site/share/hwGUuZZVflnSpFWQTAQwx>
+- EdgeOne Makers：<https://mcp.edgeone.site/share/rH3yTCkWoW2oXFixn-3E_>
 - 发布版本为单文件静态镜像，内联了项目中的 `style.css` 与 `game.js`，无需下载或安装即可游玩。
 - 已在公网版本验证桌面键鼠、移动端触控释放、农场锻造、商店购买、遗物图鉴、11 个 Boss 状态机和终局路线，浏览器控制台错误为 0。
 
@@ -54,6 +54,7 @@
 - 开始、死亡、通关完整流程，结算伤害构成、承伤、死因、击杀、遗物、存活时间和房间进度
 - `localStorage` 保存远征、通关、Boss 印记和最佳击杀，并逐步解锁初始武器与高阶遗物
 - 自适应桌面与手机屏幕
+- 手机竖屏战场会在保留完整横向视野的同时，将纵向显示自适应扩展至原来的约两倍
 - Web Audio 原生合成射击、翻滚、受击、拾取、技能和击杀反馈，不依赖外部音频文件
 
 ## 技术选型

@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const port = process.env.CDP_PORT || "9333";
+const auditBaseUrl = process.env.AUDIT_URL || pathToFileURL(path.resolve("index.html")).href;
 const targets = await fetch(`http://127.0.0.1:${port}/json`).then(response => response.json());
 const page = targets.find(target => target.type === "page");
 if (!page) throw new Error("No Chrome page target");
@@ -50,11 +51,17 @@ await call("Page.enable");
 await call("Runtime.enable");
 await call("Log.enable");
 await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-await call("Page.navigate", { url: `${pathToFileURL(path.resolve("index.html")).href}?autostart=1` });
+await call("Page.navigate", { url: auditBaseUrl });
+await wait(350);
+const authorCredit = await evaluate(`({ text: document.querySelector('.author-credit').textContent, visible: getComputedStyle(document.querySelector('.author-credit')).display !== 'none' })`);
+assert(authorCredit.visible && authorCredit.text.includes("彭铭旭") && authorCredit.text.includes("MINOS"), "Start-screen author credit is missing");
+await screenshot("v6-start-author");
+await call("Page.navigate", { url: `${auditBaseUrl}?autostart=1` });
 await wait(900);
 
 let state = await evaluate("window.__game.getState()");
 assert(state.roomCount === 55, "Campaign room count mismatch");
+assert(Math.abs(state.viewport.scaleX - state.viewport.scaleY) < .001, "Desktop room aspect ratio changed unexpectedly");
 await call("Input.dispatchKeyEvent", { type: "keyDown", code: "KeyI", key: "i" });
 await call("Input.dispatchKeyEvent", { type: "keyUp", code: "KeyI", key: "i" });
 await wait(120);
@@ -142,9 +149,13 @@ assert(state.finalBranch === "sheol" && state.biome === "燃罪魔窟", "Final r
 
 await call("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 await call("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 2 });
-await call("Page.navigate", { url: `${pathToFileURL(path.resolve("index.html")).href}?autostart=1` });
+await call("Page.navigate", { url: `${auditBaseUrl}?autostart=1` });
 await wait(650);
 const mobileBefore = await evaluate("window.__game.getState()");
+const oldMobileRoomHeight = 390 / 960 * 540;
+assert(mobileBefore.viewport.roomDisplayHeight >= oldMobileRoomHeight * 1.9, "Portrait game window did not expand to roughly double height");
+assert(mobileBefore.viewport.scaleY > mobileBefore.viewport.scaleX, "Portrait viewport did not use adaptive vertical scaling");
+await screenshot("v6-mobile-expanded-game");
 const mobileControls = await evaluate(`(() => {
   const stick = document.querySelector('#stick-zone').getBoundingClientRect();
   const fire = document.querySelector('#fire-button').getBoundingClientRect();
@@ -190,7 +201,11 @@ await evaluate("window.__game.toggleGuide(true)");
 await wait(80);
 assert(await evaluate("document.querySelector('#guide-panel').classList.contains('visible')"), "Mobile item codex did not open");
 await screenshot("v5-mobile-codex");
+await call("Page.navigate", { url: auditBaseUrl });
+await wait(350);
+assert(await evaluate("document.querySelector('.author-credit').textContent.includes('彭铭旭') && document.querySelector('.author-credit').textContent.includes('MINOS')"), "Mobile start-screen author credit is missing");
+await screenshot("v6-mobile-start-author");
 
 assert(browserErrors.length === 0, `Browser errors: ${browserErrors.join(" | ")}`);
-console.log(JSON.stringify({ itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", mobileCrossRoomFire: "passed", browserErrors: browserErrors.length }, null, 2));
+console.log(JSON.stringify({ authorCredit: "passed", portraitRoomHeight: mobileBefore.viewport.roomDisplayHeight, itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", mobileCrossRoomFire: "passed", browserErrors: browserErrors.length }, null, 2));
 socket.close();
