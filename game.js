@@ -67,6 +67,7 @@
   let lastTime = 0;
   let game;
   let screenShake = 0;
+  let hitStop = 0;
   let enemySerial = 0;
   let selectedHero = "breaker";
   let audioContext;
@@ -78,6 +79,8 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const isBoss = enemy => enemy.type.startsWith("boss");
+  const angleDelta = (target, current) => Math.atan2(Math.sin(target - current), Math.cos(target - current));
+  const turnToward = (current, target, amount) => current + angleDelta(target, current) * clamp(amount, 0, 1);
 
   function sound(frequency, duration = .06, type = "triangle", volume = .018) {
     const AudioEngine = window.AudioContext || window.webkitAudioContext;
@@ -268,6 +271,7 @@
     keys.clear();
     pointer.down = false;
     pointer.moveDown = false;
+    hitStop = 0;
     game = {
       state: "playing",
       room: 0,
@@ -296,11 +300,12 @@
       transition: 1,
       player: {
         x: 120, y: ROOM_HEIGHT / 2, radius: 14, hp: 6, maxHp: 6,
-        speed: 210, angle: 0, cooldown: 0, fireRate: .22,
+        speed: 210, angle: 0, aimAngle: 0, moveAngle: 0, vx: 0, vy: 0, cooldown: 0, fireRate: .22,
         damage: 1, bulletSpeed: 530, bulletLife: 1.4, shots: 1, roll: 0, rollCooldown: 0,
         rollDelay: .9, critChance: .05, pierce: 0, pickupRadius: 28, roomHeal: 0, bulletSize: 4,
         armor: 0, invincible: 0, flash: 0, coins: 0, knockbackX: 0, knockbackY: 0,
-        walk: 0, moveBlend: 0, skillCooldown: 0, skillDelay: 8, rage: 0,
+        walk: 0, moveBlend: 0, recoil: 0, squash: 0, muzzleFlash: 0, rollAngle: 0,
+        rollSpin: 0, trailTimer: 0, skillCooldown: 0, skillDelay: 8, rage: 0,
         explosion: 0, deathBurst: 0, chain: 0, discount: 0, luck: 0,
         coinPower: 0, contactGuard: 0, hero: selectedHero
       }
@@ -327,6 +332,8 @@
     game.roomHit = false;
     game.player.x = 108;
     game.player.y = ROOM_HEIGHT / 2;
+    game.player.vx = 0;
+    game.player.vy = 0;
     game.transition = 1;
     const room = game.rooms[index];
     room.enemies.forEach(spawnEnemy);
@@ -385,7 +392,7 @@
       hp: Math.ceil(baseHp * levelScale * (game.rooms[game.room].kind === "elite" && !boss ? 1.55 : 1)),
       maxHp: Math.ceil(baseHp * levelScale * (game.rooms[game.room].kind === "elite" && !boss ? 1.55 : 1)),
       speed: (boss ? 70 : bomber ? 48 : turret ? 30 : splitter ? 56 : cultist ? 68 : charger ? 80 : leech ? 150 : bat ? 138 : random(64, 92)) * (room.modifier === "frenzy" ? 1.24 : 1),
-      cooldown: random(.3, 1.2), angle: 0, flash: 0,
+      cooldown: random(.3, 1.2), angle: 0, flash: 0, recoil: 0, attackFlash: 0, squash: 0,
       phase: random(0, TAU), charge: 0, windup: 0, chargeAngle: 0, spawnCooldown: 2.8,
       elite: game.rooms[game.room].kind === "elite" && !boss, dead: false
     });
@@ -396,6 +403,10 @@
     if (player.cooldown > 0 || player.roll > 0) return;
     player.cooldown = player.fireRate;
     player.angle = angle;
+    player.aimAngle = angle;
+    player.recoil = 6;
+    player.squash = Math.max(player.squash, .28);
+    player.muzzleFlash = .075;
     const critical = Math.random() < player.critChance;
     const coinMultiplier = 1 + Math.min(1.5, player.coins * player.coinPower);
     const rageMultiplier = player.rage > 0 ? 1.65 : 1;
@@ -404,6 +415,8 @@
       game.bullets.push({
         x: player.x + Math.cos(shotAngle) * 19,
         y: player.y + Math.sin(shotAngle) * 19,
+        previousX: player.x + Math.cos(shotAngle) * 12,
+        previousY: player.y + Math.sin(shotAngle) * 12,
         vx: Math.cos(shotAngle) * player.bulletSpeed,
         vy: Math.sin(shotAngle) * player.bulletSpeed,
         radius: player.bulletSize + (critical ? 1.5 : 0), life: player.bulletLife,
@@ -411,24 +424,30 @@
         pierce: player.pierce, explosion: player.explosion, chain: player.chain, hitIds: new Set()
       });
     }
-    burst(player.x + Math.cos(angle) * 21, player.y + Math.sin(angle) * 21, "#ffd76a", 3, 60);
+    directionalBurst(player.x + Math.cos(angle) * 34, player.y + Math.sin(angle) * 34, angle, "#ffd76a", 5, 95);
     sound(220 + Math.random() * 35, .045, "triangle", .009);
   }
 
   function enemyFire(enemy, count = 1, spread = .18) {
     const base = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
+    enemy.recoil = isBoss(enemy) ? 8 : 4;
+    enemy.attackFlash = .12;
     for (let index = 0; index < count; index += 1) {
       const angle = base + (index - (count - 1) / 2) * spread;
       const speed = isBoss(enemy) ? 240 : 190;
-      game.enemyBullets.push({ x: enemy.x, y: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: isBoss(enemy) ? 6 : 5, life: 4 });
+      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: isBoss(enemy) ? 6 : 5, life: 4 });
     }
+    directionalBurst(enemy.x + Math.cos(base) * enemy.radius, enemy.y + Math.sin(base) * enemy.radius, base, "#ff7657", isBoss(enemy) ? 8 : 4, 80);
   }
 
   function radialFire(enemy, count) {
+    enemy.attackFlash = .16;
+    enemy.squash = .34;
     for (let index = 0; index < count; index += 1) {
       const angle = enemy.phase + index / count * TAU;
-      game.enemyBullets.push({ x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 155, vy: Math.sin(angle) * 155, radius: 6, life: 5 });
+      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * 155, vy: Math.sin(angle) * 155, radius: 6, life: 5 });
     }
+    shockwave(enemy.x, enemy.y, "#e45645", 4);
   }
 
   function roll() {
@@ -437,6 +456,11 @@
     player.roll = .34;
     player.rollCooldown = player.rollDelay;
     player.invincible = .42;
+    const velocityLength = Math.hypot(player.vx, player.vy);
+    player.rollAngle = velocityLength > 18 ? Math.atan2(player.vy, player.vx) : player.moveBlend > .1 ? player.moveAngle : player.aimAngle;
+    player.rollSpin = 0;
+    player.trailTimer = 0;
+    player.squash = .75;
     burst(player.x, player.y, "#d8c7a2", 8, 100);
     sound(115, .12, "sine", .014);
   }
@@ -506,6 +530,30 @@
       const angle = random(0, TAU);
       const velocity = random(speed * .35, speed);
       game.particles.push({ x, y, vx: Math.cos(angle) * velocity, vy: Math.sin(angle) * velocity, life: random(.2, .5), maxLife: .5, color, size: random(2, 5) });
+    }
+  }
+
+  function directionalBurst(x, y, angle, color, count, speed) {
+    for (let index = 0; index < count; index += 1) {
+      const sparkAngle = angle + random(-.62, .62);
+      const velocity = random(speed * .45, speed);
+      game.particles.push({
+        x, y, vx: Math.cos(sparkAngle) * velocity, vy: Math.sin(sparkAngle) * velocity,
+        life: random(.08, .2), maxLife: .2, color, size: random(1.4, 3.2), streak: true
+      });
+    }
+  }
+
+  function impactBurst(x, y, angle, critical) {
+    const color = critical ? "#fff4a8" : "#f7bc62";
+    directionalBurst(x, y, angle + Math.PI, color, critical ? 12 : 7, critical ? 240 : 165);
+    for (let index = 0; index < (critical ? 8 : 4); index += 1) {
+      const bloodAngle = angle + random(-1.15, 1.15);
+      const velocity = random(45, critical ? 175 : 115);
+      game.particles.push({
+        x, y, vx: Math.cos(bloodAngle) * velocity, vy: Math.sin(bloodAngle) * velocity,
+        life: random(.2, .42), maxLife: .42, color: "#9e3340", size: random(2.2, 4.4), drop: true
+      });
     }
   }
 
@@ -581,6 +629,9 @@
     player.rage = Math.max(0, player.rage - dt);
     player.invincible = Math.max(0, player.invincible - dt);
     player.flash = Math.max(0, player.flash - dt);
+    player.recoil *= Math.pow(.0008, dt);
+    player.squash *= Math.pow(.003, dt);
+    player.muzzleFlash = Math.max(0, player.muzzleFlash - dt);
     if (player.roll > 0) player.roll -= dt;
     player.knockbackX *= Math.pow(.025, dt);
     player.knockbackY *= Math.pow(.025, dt);
@@ -596,12 +647,34 @@
     }
     const moveLength = Math.hypot(moveX, moveY) || 1;
     if (Math.hypot(moveX, moveY) > 1) { moveX /= moveLength; moveY /= moveLength; }
-    const currentSpeed = player.speed * (player.roll > 0 ? 2.75 : 1) * (player.rage > 0 ? 1.22 : 1);
     const moving = Math.min(1, Math.hypot(moveX, moveY));
-    player.moveBlend += (moving - player.moveBlend) * Math.min(1, dt * 12);
-    player.walk += dt * (4 + currentSpeed * .026) * moving;
-    player.x = clamp(player.x + (moveX * currentSpeed + player.knockbackX) * dt, WALL + player.radius, ROOM_WIDTH - WALL - player.radius);
-    player.y = clamp(player.y + (moveY * currentSpeed + player.knockbackY) * dt, WALL + player.radius, ROOM_HEIGHT - WALL - player.radius);
+    const rageMultiplier = player.rage > 0 ? 1.22 : 1;
+    const rolling = player.roll > 0;
+    const targetSpeed = player.speed * rageMultiplier * (rolling ? 2.8 : moving);
+    const targetAngle = rolling ? player.rollAngle : Math.atan2(moveY, moveX);
+    const desiredX = moving || rolling ? Math.cos(targetAngle) * targetSpeed : 0;
+    const desiredY = moving || rolling ? Math.sin(targetAngle) * targetSpeed : 0;
+    const responsiveness = 1 - Math.exp(-(rolling ? 30 : moving ? 16 : 22) * dt);
+    player.vx += (desiredX - player.vx) * responsiveness;
+    player.vy += (desiredY - player.vy) * responsiveness;
+    const velocity = Math.hypot(player.vx, player.vy);
+    if (velocity > 5) player.moveAngle = turnToward(player.moveAngle, Math.atan2(player.vy, player.vx), dt * (rolling ? 24 : 13));
+    player.moveBlend += (clamp(velocity / Math.max(1, player.speed), 0, 1) - player.moveBlend) * Math.min(1, dt * 14);
+    player.walk += dt * (4.5 + velocity * .031) * player.moveBlend;
+    player.rollSpin += rolling ? dt * TAU / .34 : 0;
+    if (rolling) {
+      player.trailTimer -= dt;
+      if (player.trailTimer <= 0) {
+        player.trailTimer = .045;
+        game.particles.push({
+          x: player.x, y: player.y, vx: -player.vx * .045, vy: -player.vy * .045,
+          life: .2, maxLife: .2, color: heroes[player.hero].color, size: 22,
+          ghost: true, angle: player.moveAngle + player.rollSpin
+        });
+      }
+    }
+    player.x = clamp(player.x + (player.vx + player.knockbackX) * dt, WALL + player.radius, ROOM_WIDTH - WALL - player.radius);
+    player.y = clamp(player.y + (player.vy + player.knockbackY) * dt, WALL + player.radius, ROOM_HEIGHT - WALL - player.radius);
     resolveObstacleCollision(player);
 
     let aimX = 0;
@@ -610,11 +683,19 @@
     if (keys.has("ArrowRight")) aimX += 1;
     if (keys.has("ArrowUp")) aimY -= 1;
     if (keys.has("ArrowDown")) aimY += 1;
-    if (aimX || aimY) firePlayer(Math.atan2(aimY, aimX));
-    else if (pointer.down && pointer.active) firePlayer(Math.atan2(pointer.y - player.y, pointer.x - player.x));
+    if (aimX || aimY) {
+      player.aimAngle = Math.atan2(aimY, aimX);
+      firePlayer(player.aimAngle);
+    } else if (pointer.down && pointer.active) {
+      player.aimAngle = Math.atan2(pointer.y - player.y, pointer.x - player.x);
+      firePlayer(player.aimAngle);
+    }
     else if (pointer.down) {
       const target = nearestEnemy();
-      if (target) firePlayer(Math.atan2(target.y - player.y, target.x - player.x));
+      if (target) {
+        player.aimAngle = Math.atan2(target.y - player.y, target.x - player.x);
+        firePlayer(player.aimAngle);
+      }
     }
 
     updateBullets(dt);
@@ -649,7 +730,7 @@
       if (game.room === game.rooms.length - 1) finish(true);
       else enterRoom(game.room + 1);
     }
-    game.texts.forEach(text => { text.life -= dt; text.y -= dt * 8; });
+    game.texts.forEach(text => { text.life -= dt; text.y += (text.velocityY ?? -8) * dt; });
     game.texts = game.texts.filter(text => text.life > 0);
     screenShake = Math.max(0, screenShake - dt * 28);
   }
@@ -657,6 +738,8 @@
   function updateBullets(dt) {
     const player = game.player;
     for (const bullet of game.bullets) {
+      bullet.previousX = bullet.x;
+      bullet.previousY = bullet.y;
       bullet.x += bullet.vx * dt;
       bullet.y += bullet.vy * dt;
       bullet.life -= dt;
@@ -666,7 +749,7 @@
         damageEnemy(enemy, bullet.damage, bullet);
         if (bullet.pierce > 0) bullet.pierce -= 1;
         else bullet.life = 0;
-        burst(bullet.x, bullet.y, bullet.critical ? "#fff4a8" : "#f7d47a", bullet.critical ? 9 : 5, bullet.critical ? 145 : 90);
+        impactBurst(bullet.x, bullet.y, Math.atan2(bullet.vy, bullet.vx), bullet.critical);
         if (bullet.explosion > 0) {
           const radius = 45 + bullet.explosion * 90;
           for (const target of game.enemies) if (!target.dead && target !== enemy && distance(target, bullet) < radius) damageEnemy(target, bullet.damage * .45, bullet);
@@ -690,6 +773,8 @@
       }
     }
     for (const bullet of game.enemyBullets) {
+      bullet.previousX = bullet.x;
+      bullet.previousY = bullet.y;
       bullet.x += bullet.vx * dt;
       bullet.y += bullet.vy * dt;
       bullet.life -= dt;
@@ -709,11 +794,22 @@
     if (!enemy || enemy.dead) return;
     enemy.hp -= amount;
     enemy.flash = .12;
+    enemy.squash = Math.max(enemy.squash || 0, source && source.critical ? .72 : .38);
+    const critical = Boolean(source && source.critical);
+    const impactAngle = source && Number.isFinite(source.vx) ? Math.atan2(source.vy, source.vx) : source ? Math.atan2(enemy.y - source.y, enemy.x - source.x) : 0;
+    hitStop = Math.max(hitStop, source && source.skill ? .055 : critical ? .045 : .018);
+    screenShake = Math.max(screenShake, source && source.skill ? 7 : critical ? 5 : 2.5);
+    game.texts.push({
+      text: `${critical ? "暴击 " : ""}${Math.max(.1, amount).toFixed(amount < 1 ? 1 : 0)}`,
+      x: enemy.x + random(-8, 8), y: enemy.y - enemy.radius - 8,
+      life: critical ? .72 : .5, color: critical ? "#fff3a5" : "#f2c77f", size: critical ? 18 : 13,
+      velocityY: critical ? -34 : -24
+    });
     if (source) {
-      const angle = Math.atan2(enemy.y - source.y, enemy.x - source.x);
-      enemy.x += Math.cos(angle) * (source.skill ? 18 : 4);
-      enemy.y += Math.sin(angle) * (source.skill ? 18 : 4);
+      enemy.x += Math.cos(impactAngle) * (source.skill ? 18 : critical ? 8 : 4);
+      enemy.y += Math.sin(impactAngle) * (source.skill ? 18 : critical ? 8 : 4);
     }
+    if (critical) sound(410, .07, "square", .012);
     if (enemy.hp <= 0) killEnemy(enemy);
   }
 
@@ -774,6 +870,9 @@
       if (enemy.dead) continue;
       enemy.cooldown -= dt;
       enemy.flash = Math.max(0, enemy.flash - dt);
+      enemy.recoil *= Math.pow(.001, dt);
+      enemy.attackFlash = Math.max(0, enemy.attackFlash - dt);
+      enemy.squash *= Math.pow(.004, dt);
       enemy.phase += dt * (isBoss(enemy) ? 1.5 : .8);
       const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
       enemy.angle = angle;
@@ -1089,12 +1188,13 @@
     const shakeY = random(-screenShake, screenShake);
     context.translate(offsetX + shakeX, offsetY + shakeY);
     context.scale(scale, scale);
-    drawRoom();
-    if (game) {
-      drawObstacles();
-      drawPickups();
-      drawBombs();
-      drawBullets();
+      drawRoom();
+      if (game) {
+        drawObstacles();
+        drawPickups();
+        drawBombs();
+        drawThreatTelegraphs();
+        drawBullets();
       drawEnemies();
       drawPlayer();
       drawParticles();
@@ -1404,9 +1504,10 @@
     const hero = heroes[player.hero];
     const bob = Math.sin(player.walk * 2) * 2 * player.moveBlend;
     const stride = Math.sin(player.walk) * 4 * player.moveBlend;
+    const bodyAngle = player.moveBlend > .08 ? player.moveAngle : player.aimAngle;
+    const rollRotation = player.roll > 0 ? player.rollSpin : 0;
     context.save();
     context.translate(player.x, player.y + bob);
-    context.scale(1.08, 1.08);
     if (player.armor > 0) {
       context.strokeStyle = "#91d4e8";
       context.lineWidth = 4;
@@ -1415,7 +1516,8 @@
       context.globalAlpha = 1;
     }
     if (player.invincible > 0 && Math.floor(player.invincible * 14) % 2 === 0) context.globalAlpha = .35;
-    context.rotate(player.angle);
+    context.rotate(bodyAngle + rollRotation);
+    context.scale(1.08 * (1 + player.squash * .14), 1.08 * (1 - player.squash * .11));
     context.fillStyle = "#100d11aa";
     context.beginPath(); context.ellipse(-3, 19, 24, 9, 0, 0, TAU); context.fill();
     drawLimb(-8, 11, -12 + stride, 20, 7, "#ceb58f");
@@ -1434,6 +1536,9 @@
     context.strokeStyle = "#1f3933";
     context.lineWidth = 2;
     context.beginPath(); context.moveTo(-7, 1); context.quadraticCurveTo(-1, 10, -5, 21); context.stroke();
+    context.save();
+    context.rotate(player.roll > 0 ? 0 : angleDelta(player.aimAngle, bodyAngle));
+    context.translate(-player.recoil, 0);
     drawLimb(4, 3, 20, 1, 6, "#cfb58f");
     drawLimb(-8, 3, -18, 9, 6, "#cfb58f");
     context.fillStyle = player.flash > 0 ? "#fff" : "#dcc6a3";
@@ -1491,6 +1596,21 @@
     roundedRect(17, -4, 20, 8, 3); context.fill(); context.stroke();
     context.fillStyle = "#e2b55d";
     context.fillRect(31, -2, 8, 4);
+    if (player.muzzleFlash > 0) {
+      const flash = 8 + player.muzzleFlash * 95;
+      context.fillStyle = "#fff1a6";
+      context.shadowColor = "#ff8a38";
+      context.shadowBlur = 14;
+      context.beginPath();
+      context.moveTo(39, 0);
+      context.lineTo(39 + flash, -5);
+      context.lineTo(44 + flash * .55, 0);
+      context.lineTo(39 + flash, 5);
+      context.closePath();
+      context.fill();
+      context.shadowBlur = 0;
+    }
+    context.restore();
     context.restore();
   }
 
@@ -1499,6 +1619,8 @@
       context.save();
       context.translate(enemy.x, enemy.y);
       context.rotate(enemy.angle);
+      context.translate(-enemy.recoil, 0);
+      context.scale(1 + enemy.squash * .12, 1 - enemy.squash * .1);
       if (enemy.elite) {
         context.strokeStyle = "#f0b85c";
         context.lineWidth = 3;
@@ -1517,6 +1639,20 @@
       else if (enemy.type === "cultist") drawCultist(enemy);
       else if (enemy.type === "bomber") drawBomber(enemy);
       else drawBoss(enemy);
+      if (enemy.attackFlash > 0) {
+        const flash = enemy.radius * .45 + enemy.attackFlash * 55;
+        context.fillStyle = "#ffb15c";
+        context.shadowColor = "#e94836";
+        context.shadowBlur = 13;
+        context.beginPath();
+        context.moveTo(enemy.radius * .72, 0);
+        context.lineTo(enemy.radius + flash, -5);
+        context.lineTo(enemy.radius + flash * .65, 0);
+        context.lineTo(enemy.radius + flash, 5);
+        context.closePath();
+        context.fill();
+        context.shadowBlur = 0;
+      }
       context.restore();
       if (!["grunt", "bat", "leech"].includes(enemy.type)) drawHealthBar(enemy);
     }
@@ -1901,12 +2037,50 @@
     }
   }
 
+  function drawThreatTelegraphs() {
+    for (const enemy of game.enemies) {
+      if (enemy.dead || enemy.type !== "charger" || enemy.windup <= 0) continue;
+      const strength = 1 - clamp(enemy.windup / .48, 0, 1);
+      context.save();
+      context.translate(enemy.x, enemy.y);
+      context.rotate(enemy.chargeAngle);
+      const warning = context.createLinearGradient(enemy.radius, 0, 290, 0);
+      warning.addColorStop(0, `rgba(255, 183, 76, ${.24 + strength * .22})`);
+      warning.addColorStop(1, "rgba(222, 53, 43, 0)");
+      context.fillStyle = warning;
+      context.beginPath();
+      context.moveTo(enemy.radius, -8 - strength * 4);
+      context.lineTo(290, -2);
+      context.lineTo(290, 2);
+      context.lineTo(enemy.radius, 8 + strength * 4);
+      context.closePath();
+      context.fill();
+      context.strokeStyle = `rgba(255, 101, 67, ${.48 + strength * .45})`;
+      context.lineWidth = 2 + strength * 2;
+      context.setLineDash([10, 8]);
+      context.beginPath(); context.moveTo(enemy.radius, 0); context.lineTo(260, 0); context.stroke();
+      context.setLineDash([]);
+      context.restore();
+    }
+  }
+
   function drawBullets() {
     for (const bullet of game.bullets) {
+      const bulletColor = bullet.coin ? "#ffe079" : bullet.chain ? "#d6c4ff" : bullet.explosion ? "#ffc079" : bullet.critical ? "#fffbd1" : "#fff0a6";
+      context.save();
+      context.strokeStyle = bulletColor;
+      context.globalAlpha = bullet.critical ? .72 : .48;
+      context.lineWidth = bullet.radius * (bullet.critical ? 1.8 : 1.25);
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(bullet.previousX ?? bullet.x, bullet.previousY ?? bullet.y);
+      context.lineTo(bullet.x - bullet.vx * .018, bullet.y - bullet.vy * .018);
+      context.stroke();
+      context.restore();
       context.save();
       context.translate(bullet.x, bullet.y);
       context.rotate(Math.atan2(bullet.vy, bullet.vx));
-      context.fillStyle = bullet.coin ? "#ffe079" : bullet.chain ? "#d6c4ff" : bullet.explosion ? "#ffc079" : bullet.critical ? "#fffbd1" : "#fff0a6";
+      context.fillStyle = bulletColor;
       context.shadowColor = bullet.coin ? "#ffd13b" : bullet.chain ? "#9a7df0" : bullet.critical ? "#fff" : "#ffb52e"; context.shadowBlur = bullet.critical ? 17 : 10;
       context.strokeStyle = bullet.chain ? "#67528c" : "#906a38";
       context.lineWidth = 1.5;
@@ -1919,6 +2093,15 @@
     }
     context.shadowBlur = 0;
     for (const bullet of game.enemyBullets) {
+      context.strokeStyle = "#f05a58";
+      context.globalAlpha = .42;
+      context.lineWidth = bullet.radius * 1.3;
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(bullet.previousX ?? bullet.x, bullet.previousY ?? bullet.y);
+      context.lineTo(bullet.x - bullet.vx * .022, bullet.y - bullet.vy * .022);
+      context.stroke();
+      context.globalAlpha = 1;
       context.fillStyle = "#b93646";
       context.shadowColor = "#e94b5d";
       context.shadowBlur = 9;
@@ -2054,6 +2237,29 @@
         context.strokeStyle = particle.color;
         context.lineWidth = 5 * (1 - progress);
         context.beginPath(); context.arc(particle.x, particle.y, particle.size + progress * 150, 0, TAU); context.stroke();
+      } else if (particle.ghost) {
+        context.save();
+        context.translate(particle.x, particle.y);
+        context.rotate(particle.angle || 0);
+        context.fillStyle = particle.color;
+        context.globalAlpha *= .22;
+        context.beginPath(); context.ellipse(0, 0, particle.size, particle.size * .72, 0, 0, TAU); context.fill();
+        context.restore();
+      } else if (particle.streak) {
+        context.strokeStyle = particle.color;
+        context.lineWidth = particle.size;
+        context.lineCap = "round";
+        context.beginPath();
+        context.moveTo(particle.x, particle.y);
+        context.lineTo(particle.x - particle.vx * .055, particle.y - particle.vy * .055);
+        context.stroke();
+      } else if (particle.drop) {
+        context.save();
+        context.translate(particle.x, particle.y);
+        context.rotate(Math.atan2(particle.vy, particle.vx));
+        context.fillStyle = particle.color;
+        context.beginPath(); context.ellipse(0, 0, particle.size * 1.7, particle.size, 0, 0, TAU); context.fill();
+        context.restore();
       } else {
         context.fillStyle = particle.color;
         context.beginPath(); context.arc(particle.x, particle.y, particle.size, 0, TAU); context.fill();
@@ -2206,10 +2412,13 @@
 
   function drawTexts() {
     context.textAlign = "center";
-    context.font = "900 22px system-ui";
     for (const text of game.texts) {
       context.globalAlpha = Math.min(1, text.life);
-      context.fillStyle = "#ffe09a";
+      context.font = `900 ${text.size || 22}px system-ui`;
+      context.fillStyle = text.color || "#ffe09a";
+      context.strokeStyle = "#1b1115";
+      context.lineWidth = text.size ? 3 : 4;
+      context.strokeText(text.text, text.x, text.y);
       context.fillText(text.text, text.x, text.y);
     }
     context.globalAlpha = 1;
@@ -2219,7 +2428,8 @@
   function frame(time) {
     const dt = Math.min((time - lastTime) / 1000 || 0, .033);
     lastTime = time;
-    update(dt);
+    if (hitStop > 0) hitStop = Math.max(0, hitStop - dt);
+    else update(dt);
     render();
     requestAnimationFrame(frame);
   }
@@ -2344,7 +2554,13 @@
         pickupTypes: game.pickups.map(pickup => pickup.type),
         hp: game.player.hp,
         maxHp: game.player.maxHp,
-        player: { x: game.player.x, y: game.player.y },
+        player: {
+          x: game.player.x, y: game.player.y,
+          vx: game.player.vx, vy: game.player.vy,
+          speed: Math.hypot(game.player.vx, game.player.vy),
+          moveAngle: game.player.moveAngle, aimAngle: game.player.aimAngle,
+          rolling: game.player.roll > 0
+        },
         enemyCount: game.enemies.length,
         playerBullets: game.bullets.length,
         enemyBullets: game.enemyBullets.length,
@@ -2359,6 +2575,12 @@
         bombs: game.bombs.length,
         coins: game.player.coins,
         skillCooldown: game.player.skillCooldown,
+        feedback: {
+          particles: game.particles.length,
+          damageTexts: game.texts.filter(text => text.size).length,
+          hitStop,
+          screenShake
+        },
         itemsFound: game.itemsFound,
         itemStacks: { ...game.itemStacks },
         flowCounts: Object.fromEntries(["destroy", "coin", "spell", "titan"].map(tag => [tag, items.filter(item => item.tag === tag && game.itemStacks[item.id]).length])),

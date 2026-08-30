@@ -81,17 +81,26 @@ for (const type of ["grunt", "charger", "turret", "bat", "splitter", "leech", "c
 }
 assert(state.obstacles > 0, "Interactive room obstacles were not generated");
 game.useSkill();
-step(2);
+step(5);
 assert(game.getState().skillCooldown > 0, "Hero active skill failed");
 
 const startX = state.player.x;
 documentEvents.keydown[0]({ code: "KeyD", key: "d", repeat: false, preventDefault() {} });
+step(1);
+const acceleratingSpeed = game.getState().player.speed;
+assert(acceleratingSpeed > 0 && acceleratingSpeed < game.getState().stats.speed, "Movement acceleration failed");
 step(25);
 documentEvents.keyup[0]({ code: "KeyD", key: "d" });
 assert(game.getState().player.x > startX + 40, "Keyboard movement failed");
+const releaseSpeed = game.getState().player.speed;
+step(8);
+assert(game.getState().player.speed < releaseSpeed * .2, "Movement deceleration failed");
 
 documentEvents.keydown[0]({ code: "ArrowRight", key: "ArrowRight", repeat: false, preventDefault() {} });
-step(12);
+step(2);
+assert(Math.abs(game.getState().player.aimAngle) < .01, "Independent aiming failed");
+assert(game.getState().feedback.particles > 0, "Muzzle feedback failed");
+step(10);
 documentEvents.keyup[0]({ code: "ArrowRight", key: "ArrowRight" });
 assert(game.getState().playerBullets > 0, "Keyboard shooting failed");
 
