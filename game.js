@@ -375,6 +375,7 @@
       comboTimer: 0,
       perfectRooms: 0,
       destroyedProps: 0,
+      shopPurchases: 0,
       damageDealt: 0,
       damageTaken: 0,
       damageBySource: {},
@@ -466,17 +467,22 @@
       room.cleared = true;
       game.player.hp = Math.min(game.player.maxHp, game.player.hp + 3);
       game.player.armor += 1;
+      game.player.coins += 2 + room.chapter;
       game.doorOpen = true;
-      game.texts.push({ text: "守烛圣所 · 恢复生命并获得护盾", x: ROOM_WIDTH / 2, y: 128, life: 2.8, color: "#a7e4bc" });
+      game.texts.push({ text: `守烛圣所 · 恢复生命、护盾与 ${2 + room.chapter} 枚弹壳币`, x: ROOM_WIDTH / 2, y: 128, life: 2.8, color: "#a7e4bc", size: 16 });
     }
     if (room.kind === "treasure" && !room.cleared) {
       room.choices.forEach((item, choice) => game.pickups.push({ x: 390 + choice * 135, y: ROOM_HEIGHT / 2, type: "item", item, phase: choice, choiceGroup: "treasure" }));
       game.texts.push({ text: "宝库馈赠 · 三选一", x: ROOM_WIDTH / 2, y: 130, life: 2.5 });
     }
     if (room.kind === "shop" && !room.cleared) {
-      room.choices.forEach((item, choice) => game.pickups.push({ x: 390 + choice * 135, y: ROOM_HEIGHT / 2, type: "item", item, phase: choice, price: Math.max(3, Math.round((5 + choice * 2 + room.chapter) * (1 - game.player.discount))) }));
+      room.choices.forEach((item, choice) => {
+        const x = 390 + choice * 135;
+        const price = Math.max(1, Math.round((2 + choice * 2 + room.chapter) * (1 - game.player.discount)));
+        game.pickups.push({ x, y: ROOM_HEIGHT / 2, homeX: x, homeY: ROOM_HEIGHT / 2, type: "item", item, phase: choice, price, shopItem: true });
+      });
       game.doorOpen = true;
-      game.texts.push({ text: "盲眼商贩 · 靠近遗物购买", x: ROOM_WIDTH / 2, y: 130, life: 2.5 });
+      game.texts.push({ text: `盲眼商贩 · 靠近或点击购买 · 持有 ${game.player.coins} 枚`, x: ROOM_WIDTH / 2, y: 130, life: 2.8, size: 16 });
     }
     createObstacles(room);
     if (room.cleared) game.doorOpen = true;
@@ -1556,7 +1562,7 @@
         continue;
       }
       const pickupDistance = distance(pickup, game.player);
-      if (!["chest", "opening"].includes(pickup.type) && pickupDistance < game.player.pickupRadius && pickupDistance > 6) {
+      if (!pickup.shopItem && !["chest", "opening"].includes(pickup.type) && pickupDistance < game.player.pickupRadius && pickupDistance > 6) {
         const pull = Math.min(420, 110 + (game.player.pickupRadius - pickupDistance) * 5);
         pickup.x += (game.player.x - pickup.x) / pickupDistance * pull * dt;
         pickup.y += (game.player.y - pickup.y) / pickupDistance * pull * dt;
@@ -1569,29 +1575,43 @@
         burst(pickup.x, pickup.y, "#9c6b3e", 8, 80);
         continue;
       }
-      if (pickup.type === "item" && pickup.price && game.player.coins < pickup.price) {
-        if (!pickup.warnCooldown || pickup.warnCooldown <= 0) {
-          game.texts.push({ text: `需要 ${pickup.price} 枚弹壳币`, x: pickup.x, y: pickup.y - 40, life: 1 });
-          pickup.warnCooldown = 1.2;
-        }
-        continue;
-      }
-      pickup.dead = true;
-      if (pickup.type === "heart") game.player.hp = Math.min(game.player.maxHp, game.player.hp + 2);
-      if (pickup.type === "coin") game.player.coins += 1;
-      if (pickup.type === "crown") { game.player.coins += 5; game.player.hp = game.player.maxHp; }
-      if (pickup.type === "item") {
-        if (pickup.price) game.player.coins -= pickup.price;
-        grantItem(pickup.item);
-        if (pickup.choiceGroup) {
-          game.pickups.forEach(candidate => { if (candidate.choiceGroup === pickup.choiceGroup && candidate !== pickup) candidate.dead = true; });
-          if (game.rooms[game.room].kind === "treasure" && game.room < game.rooms.length - 1) openRouteChoice();
-        }
-      }
-      burst(pickup.x, pickup.y, "#74d69b", 12, 120);
-      sound(pickup.type === "item" ? 520 : 680, pickup.type === "item" ? .2 : .08, "sine", .018);
+      if (pickup.shopItem) attemptShopPurchase(pickup);
+      else collectPickup(pickup);
     }
     game.pickups = game.pickups.filter(pickup => !pickup.dead);
+  }
+
+  function attemptShopPurchase(pickup) {
+    if (!pickup || pickup.dead || !pickup.shopItem) return false;
+    if (game.player.coins < pickup.price) {
+      if (!pickup.warnCooldown || pickup.warnCooldown <= 0) {
+        game.texts.push({ text: `金币不足 · 持有 ${game.player.coins} / 需要 ${pickup.price}`, x: pickup.homeX, y: pickup.homeY - 46, life: 1.2, color: "#ef7866", size: 15 });
+        pickup.warnCooldown = 1.2;
+        sound(92, .08, "square", .008);
+      }
+      return false;
+    }
+    game.player.coins -= pickup.price;
+    game.shopPurchases += 1;
+    collectPickup(pickup);
+    game.texts.push({ text: `购买成功 · 余 ${game.player.coins} 枚`, x: pickup.homeX, y: pickup.homeY - 46, life: 1.2, color: "#91dfaa", size: 15 });
+    return true;
+  }
+
+  function collectPickup(pickup) {
+    pickup.dead = true;
+    if (pickup.type === "heart") game.player.hp = Math.min(game.player.maxHp, game.player.hp + 2);
+    if (pickup.type === "coin") game.player.coins += 1;
+    if (pickup.type === "crown") { game.player.coins += 5; game.player.hp = game.player.maxHp; }
+    if (pickup.type === "item") {
+      grantItem(pickup.item);
+      if (pickup.choiceGroup) {
+        game.pickups.forEach(candidate => { if (candidate.choiceGroup === pickup.choiceGroup && candidate !== pickup) candidate.dead = true; });
+        if (game.rooms[game.room].kind === "treasure" && game.room < game.rooms.length - 1) openRouteChoice();
+      }
+    }
+    burst(pickup.x, pickup.y, "#74d69b", 12, 120);
+    sound(pickup.type === "item" ? 520 : 680, pickup.type === "item" ? .2 : .08, "sine", .018);
   }
 
   function openRouteChoice() {
@@ -1599,7 +1619,7 @@
     game.doorOpen = false;
     game.routeChoice = {
       options: [
-        { id: "safe", name: "守烛小径", detail: "下一房间无战斗，恢复 1½ 颗心并获得护盾", color: "#79bd91" },
+        { id: "safe", name: "守烛小径", detail: "下一房间无战斗，恢复生命、护盾与商店启动金", color: "#79bd91" },
         { id: "risk", name: "双誓险路", detail: "强化诅咒精英，额外遗物与 4 枚弹壳币", color: "#dc715d" }
       ]
     };
@@ -2826,6 +2846,7 @@
         context.fillStyle = "#f0cf73";
         context.beginPath(); context.arc(0, 10, 4, 0, TAU); context.fill();
       } else if (pickup.type === "item") {
+        const affordable = !pickup.shopItem || game.player.coins >= pickup.price;
         context.shadowColor = "#f2c96d";
         context.shadowBlur = 18 + Math.sin(pickup.phase) * 5;
         context.fillStyle = "#e7c26b33";
@@ -2841,8 +2862,15 @@
         context.fillStyle = "#f4e6c4";
         context.fillText(pickup.item.name, 0, 39);
         context.font = "800 10px system-ui";
-        context.fillStyle = pickup.price ? "#efc45e" : "#a99b88";
-        context.fillText(pickup.price ? `◉ ${pickup.price}` : pickup.item.detail, 0, 52);
+        context.fillStyle = pickup.shopItem ? affordable ? "#91dfaa" : "#ef7866" : "#a99b88";
+        context.fillText(pickup.shopItem ? `◉ ${pickup.price} · ${affordable ? "靠近 / 点击购买" : `持有 ${game.player.coins}`}` : pickup.item.detail, 0, 52);
+        if (pickup.shopItem) {
+          context.strokeStyle = affordable ? "#79c995" : "#a94d49";
+          context.lineWidth = 2;
+          context.globalAlpha = .5 + Math.sin(pickup.phase * 1.4) * .12;
+          context.beginPath(); context.arc(0, -7, 30, 0, TAU); context.stroke();
+          context.globalAlpha = 1;
+        }
         context.textAlign = "left";
       } else if (pickup.type === "heart") {
         context.fillStyle = "#df5954";
@@ -3225,6 +3253,14 @@
       event.preventDefault();
       return;
     }
+    if (game && game.state === "playing" && game.rooms[game.room].kind === "shop") {
+      const offer = game.pickups.find(pickup => pickup.shopItem && !pickup.dead && Math.hypot(point.x - pickup.x, point.y - pickup.y) <= 52);
+      if (offer) {
+        attemptShopPurchase(offer);
+        event.preventDefault();
+        return;
+      }
+    }
     if (event.pointerType !== "mouse") return;
     canvas.focus({ preventScroll: true });
     if (event.button === 0) pointer.down = true;
@@ -3301,6 +3337,11 @@
         enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, statuses: { ...enemy.statuses } })),
         doorOpen: game.doorOpen,
         pickupTypes: game.pickups.map(pickup => pickup.type),
+        shopOffers: game.pickups.filter(pickup => pickup.shopItem && !pickup.dead).map(pickup => ({
+          x: pickup.x, y: pickup.y, homeX: pickup.homeX, homeY: pickup.homeY,
+          price: pickup.price, affordable: game.player.coins >= pickup.price, item: pickup.item.id
+        })),
+        shopPurchases: game.shopPurchases,
         hp: game.player.hp,
         maxHp: game.player.maxHp,
         player: {
@@ -3380,6 +3421,13 @@
     collectPickups() {
       if (!game || game.state !== "playing") return;
       game.pickups.forEach(pickup => { pickup.x = game.player.x; pickup.y = game.player.y; });
+    },
+    setPlayerPosition(x, y) {
+      if (!game || game.state !== "playing") return;
+      game.player.x = clamp(x, WALL + game.player.radius, ROOM_WIDTH - WALL - game.player.radius);
+      game.player.y = clamp(y, WALL + game.player.radius, ROOM_HEIGHT - WALL - game.player.radius);
+      game.player.vx = 0;
+      game.player.vy = 0;
     },
     exitRoom() {
       if (!game || game.state !== "playing") return;

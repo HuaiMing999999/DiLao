@@ -175,6 +175,27 @@ step(2);
 assert(game.getState().routeChoice.join(",") === "safe,risk", "Route choice did not open after treasure");
 game.chooseRoute("safe");
 assert(game.getState().roomKinds[3] === "sanctuary" && game.getState().doorOpen, "Safe route failed");
+game.exitRoom();
+step(6);
+state = game.getState();
+assert(state.roomType === "sanctuary" && state.coins >= 2, "Sanctuary shop allowance failed");
+game.exitRoom();
+step(6);
+state = game.getState();
+assert(state.roomType === "shop" && state.shopOffers.length === 3 && state.shopOffers[0].affordable, "Shop did not provide an affordable offer");
+game.giveItem("magnet");
+const shopOffer = game.getState().shopOffers[0];
+game.setPlayerPosition(shopOffer.homeX - 60, shopOffer.homeY);
+step(10);
+state = game.getState();
+assert(Math.abs(state.shopOffers[0].x - shopOffer.homeX) < .01, "Shop item was incorrectly magnetized");
+const shopCoins = state.coins;
+const shopItems = state.itemsFound;
+game.setPlayerPosition(shopOffer.homeX, shopOffer.homeY);
+step(2);
+state = game.getState();
+assert(state.shopPurchases === 1 && state.itemsFound === shopItems + 1, "Contact shop purchase failed");
+assert(state.coins === shopCoins - shopOffer.price, "Shop purchase did not deduct the displayed price");
 
 game.start();
 step();
@@ -185,7 +206,7 @@ game.chooseRoute("risk");
 state = game.getState();
 assert(state.roomKinds[3] === "elite" && state.roomModifier === null && state.routeChoices === 1, "Risk route selection failed");
 game.exitRoom();
-step(3);
+step(6);
 state = game.getState();
 assert(state.roomType === "elite" && state.roomModifier === "cursed", "Risk route encounter failed");
 
@@ -256,6 +277,7 @@ console.log(JSON.stringify({
   interactiveObstacles: "passed",
   treasureChoices: 3,
   shops: 3,
+  shopPurchasing: "passed",
   keyboardMovement: "passed",
   keyboardShooting: "passed",
   eliteAffixes: "passed",
