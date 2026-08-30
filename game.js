@@ -3,9 +3,11 @@
 
   const canvas = document.querySelector("#game");
   const context = canvas.getContext("2d");
+  const gameShell = document.querySelector("#game-shell");
   const startScreen = document.querySelector("#start-screen");
   const endScreen = document.querySelector("#end-screen");
   const touchUi = document.querySelector("#touch-ui");
+  const fullscreenButton = document.querySelector("#fullscreen-button");
   const guidePanel = document.querySelector("#guide-panel");
   const guideSummary = document.querySelector("#guide-summary");
   const guideItems = document.querySelector("#guide-items");
@@ -13,9 +15,16 @@
   const workshopInventory = document.querySelector("#workshop-inventory");
   const farmPlots = document.querySelector("#farm-plots");
   const forgeRecipes = document.querySelector("#forge-recipes");
-  const ROOM_WIDTH = 960;
-  const ROOM_HEIGHT = 540;
-  const WALL = 44;
+  const ROOM_WIDTH = 1280;
+  const ROOM_HEIGHT = 720;
+  const WALL = 48;
+  const ARENA_DIAGONAL = Math.hypot(ROOM_WIDTH, ROOM_HEIGHT);
+  const BOSS_STAGE_TWO_RATIO = 2 / 3;
+  const BOSS_STAGE_THREE_RATIO = 1 / 3;
+  const ROUTE_CARD_WIDTH = 340;
+  const ROUTE_CARD_HEIGHT = 200;
+  const ROUTE_CARD_GAP = 72;
+  const ROUTE_CARD_Y = 250;
   const TAU = Math.PI * 2;
   const roomNames = [
     ["灰烬门厅", "铜锁走廊", "潮湿地窖", "蛾尘寝室"],
@@ -65,29 +74,29 @@
     orbit: { name: "血月环刃", icon: "☾", blueprintAt: 5, cost: { bone: 5, crystal: 2, sap: 4 }, detail: "投出弧线双刃，飞出后自动回到持有者身边。" }
   };
   const bossProfiles = {
-    bossCoil: { hp: 24, radius: 42, speed: 92, stages: ["蛇行", "遗蜕", "断节"] },
-    bossHopper: { hp: 30, radius: 43, speed: 82, stages: ["喷涌", "腾跃", "天坠"] },
-    bossDevourer: { hp: 36, radius: 47, speed: 74, stages: ["巡游", "吞噬", "暴食"] },
-    bossIdol: { hp: 42, radius: 48, speed: 0, stages: ["凝视", "育巢", "喷发"] },
-    bossPeep: { hp: 46, radius: 42, speed: 84, stages: ["泪池", "脱眼", "双瞳"] },
-    bossMatron: { hp: 55, radius: 52, speed: 0, stages: ["叩门", "覆掌", "践踏"] },
-    bossHollow: { hp: 54, radius: 40, speed: 120, stages: ["游空", "裂节", "疾返"] },
-    bossHeart: { hp: 64, radius: 50, speed: 70, stages: ["凝视", "心跳", "狂搏"] },
-    bossBloat: { hp: 70, radius: 45, speed: 78, stages: ["腐池", "裂眼", "血光"] },
-    bossBurrow: { hp: 78, radius: 46, speed: 105, stages: ["潜行", "露尾", "掘袭"] },
-    bossInfernal: { hp: 92, radius: 52, speed: 82, stages: ["献祭", "魔像", "双蹄"] }
+    bossCoil: { hp: 88, radius: 42, speed: 98, stages: ["蛇行", "遗蜕", "断节"] },
+    bossHopper: { hp: 104, radius: 43, speed: 88, stages: ["喷涌", "腾跃", "天坠"] },
+    bossDevourer: { hp: 126, radius: 47, speed: 80, stages: ["巡游", "吞噬", "暴食"] },
+    bossIdol: { hp: 148, radius: 48, speed: 0, stages: ["凝视", "育巢", "喷发"] },
+    bossPeep: { hp: 168, radius: 42, speed: 90, stages: ["泪池", "脱眼", "双瞳"] },
+    bossMatron: { hp: 190, radius: 52, speed: 0, stages: ["叩门", "覆掌", "践踏"] },
+    bossHollow: { hp: 210, radius: 40, speed: 128, stages: ["游空", "裂节", "疾返"] },
+    bossHeart: { hp: 236, radius: 50, speed: 76, stages: ["凝视", "心跳", "狂搏"] },
+    bossBloat: { hp: 260, radius: 45, speed: 84, stages: ["腐池", "裂眼", "血光"] },
+    bossBurrow: { hp: 292, radius: 46, speed: 112, stages: ["潜行", "露尾", "掘袭"] },
+    bossInfernal: { hp: 340, radius: 52, speed: 88, stages: ["献祭", "魔像", "双蹄"] }
   };
   const bossStageNames = Object.fromEntries(Object.entries(bossProfiles).map(([id, profile]) => [id, profile.stages]));
   const bossStageStats = [
     { move: 1, cadence: 1, projectileSpeed: 1, projectileSize: 1, damage: 1, contact: 1 },
-    { move: 1.14, cadence: 1.2, projectileSpeed: 1.16, projectileSize: 1.18, damage: 1.25, contact: 1.2 },
-    { move: 1.3, cadence: 1.46, projectileSpeed: 1.34, projectileSize: 1.34, damage: 1.5, contact: 1.45 }
+    { move: 1.22, cadence: 1.35, projectileSpeed: 1.24, projectileSize: 1.28, damage: 1.35, contact: 1.3 },
+    { move: 1.5, cadence: 1.75, projectileSpeed: 1.5, projectileSize: 1.48, damage: 1.75, contact: 1.65 }
   ];
   const heroes = {
     breaker: { name: "爆破者", path: "摧毁流", tag: "destroy", skill: "爆裂震波", color: "#c75c45", apply: player => { player.damage = 1.25; player.fireRate = .24; player.skillDelay = 8; } },
     gambler: { name: "铸币客", path: "硬币流", tag: "coin", skill: "弹壳风暴", color: "#d4a44e", apply: player => { player.coins = 6; player.damage = .9; player.fireRate = .2; player.skillDelay = 6; } },
     seer: { name: "秘仪师", path: "咒文流", tag: "spell", skill: "连锁雷咒", color: "#8f76bd", apply: player => { player.damage = .9; player.fireRate = .18; player.critChance = .12; player.chain = 1; player.skillDelay = 7; } },
-    titan: { name: "囚笼巨人", path: "泰坦流", tag: "titan", skill: "不屈怒吼", color: "#6f967b", apply: player => { player.hp = 10; player.maxHp = 10; player.damage = 1.3; player.speed = 190; player.bulletSize = 5; player.skillDelay = 10; } }
+    titan: { name: "囚笼巨人", path: "泰坦流", tag: "titan", skill: "不屈怒吼", color: "#6f967b", apply: player => { player.hp = 10; player.maxHp = 10; player.damage = 1.3; player.speed = 215; player.bulletSize = 5; player.skillDelay = 10; } }
   };
   const items = [
     { id: "powder", tag: "destroy", name: "烈性火药", icon: "✹", detail: "攻击 +0.5", apply: player => { player.damage += .5; } },
@@ -528,7 +537,7 @@
         ];
         const pool = pools[Math.min(2, Math.floor(chapterIndex / 3))];
         const modifier = chapterIndex === 0 && roomIndex === 0 ? null : randomChoice(Object.keys(roomModifiers));
-        const enemyCount = Math.min(3 + Math.floor(chapterIndex / 2) + roomIndex + Math.floor(random(0, 2)) + (modifier === "swarm" ? 2 : 0), 10);
+        const enemyCount = Math.min(4 + Math.floor(chapterIndex / 2) + roomIndex + Math.floor(random(0, 2)) + (modifier === "swarm" ? 2 : 0), 12);
         const enemyTypes = Array.from({ length: enemyCount }, () => randomChoice(pool));
         if (chapterIndex === 0 && roomIndex === 0) enemyTypes.splice(0, 2, "grunt", "charger");
         if (chapterIndex === 0 && roomIndex === 1) enemyTypes.splice(0, 2, "leech", "turret");
@@ -567,6 +576,24 @@
       offsetX = (width - ROOM_WIDTH * scale) / 2;
       offsetY = (height - ROOM_HEIGHT * verticalScale) / 2;
     }
+  }
+
+  function isTouchDevice() {
+    return Boolean(window.matchMedia?.("(pointer: coarse)").matches || window.navigator?.maxTouchPoints > 0 || width <= 760);
+  }
+
+  async function requestLandscapeMode() {
+    if (!isTouchDevice()) return false;
+    try {
+      if (!document.fullscreenElement && document.documentElement?.requestFullscreen) {
+        await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+      }
+    } catch {}
+    try {
+      if (window.screen?.orientation?.lock) await window.screen.orientation.lock("landscape");
+    } catch {}
+    resize();
+    return window.innerWidth > window.innerHeight;
   }
 
   function newGame() {
@@ -621,8 +648,8 @@
       doorOpen: false,
       transition: 1,
       player: {
-        x: 120, y: ROOM_HEIGHT / 2, radius: 14, hp: 6, maxHp: 6,
-        speed: 210, angle: 0, aimAngle: 0, moveAngle: 0, vx: 0, vy: 0, cooldown: 0, fireRate: .22,
+        x: WALL + 76, y: ROOM_HEIGHT / 2, radius: 14, hp: 6, maxHp: 6,
+        speed: 230, angle: 0, aimAngle: 0, moveAngle: 0, vx: 0, vy: 0, cooldown: 0, fireRate: .22,
         damage: 1, bulletSpeed: 530, bulletLife: 1.4, shots: 1, roll: 0, rollCooldown: 0,
         rollDelay: .9, critChance: .05, pierce: 0, pickupRadius: 28, roomHeal: 0, bulletSize: 4,
         armor: 0, invincible: 0, flash: 0, coins: 0, knockbackX: 0, knockbackY: 0,
@@ -640,6 +667,7 @@
     enterRoom(0);
     startScreen.classList.remove("visible");
     endScreen.classList.remove("visible");
+    gameShell.classList.add("playing");
     touchUi.classList.add("active");
     game.texts.push({ text: "遗物会自动生效 · 按 I 查看完整说明", x: ROOM_WIDTH / 2, y: 122, life: 4, color: "#f1d28c", size: 15 });
     requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
@@ -690,7 +718,7 @@
     game.arenaInset = 0;
     game.texts.length = 0;
     game.roomHit = false;
-    game.player.x = 108;
+    game.player.x = WALL + 66;
     game.player.y = ROOM_HEIGHT / 2;
     game.player.vx = 0;
     game.player.vy = 0;
@@ -706,12 +734,12 @@
       game.texts.push({ text: `守烛圣所 · 恢复生命、护盾与 ${2 + room.chapter} 枚弹壳币`, x: ROOM_WIDTH / 2, y: 128, life: 2.8, color: "#a7e4bc", size: 16 });
     }
     if (room.kind === "treasure" && !room.cleared) {
-      room.choices.forEach((item, choice) => game.pickups.push({ x: 390 + choice * 135, y: ROOM_HEIGHT / 2, type: "item", item, phase: choice, choiceGroup: "treasure" }));
+      room.choices.forEach((item, choice) => game.pickups.push({ x: ROOM_WIDTH / 2 + (choice - 1) * 170, y: ROOM_HEIGHT / 2, type: "item", item, phase: choice, choiceGroup: "treasure" }));
       game.texts.push({ text: "宝库馈赠 · 三选一", x: ROOM_WIDTH / 2, y: 130, life: 2.5 });
     }
     if (room.kind === "shop" && !room.cleared) {
       room.choices.forEach((item, choice) => {
-        const x = 390 + choice * 135;
+        const x = ROOM_WIDTH / 2 + (choice - 1) * 170;
         const price = Math.max(1, Math.round((2 + choice * 2 + room.chapter) * (1 - game.player.discount)));
         game.pickups.push({ x, y: ROOM_HEIGHT / 2, homeX: x, homeY: ROOM_HEIGHT / 2, type: "item", item, phase: choice, price, shopItem: true });
       });
@@ -724,13 +752,13 @@
 
   function createObstacles(room) {
     if (["treasure", "shop", "sanctuary"].includes(room.kind)) return;
-    const count = room.kind === "boss" ? 2 : 4 + room.chapter;
+    const count = room.kind === "boss" ? 3 : 6 + Math.min(4, room.chapter);
     for (let index = 0; index < count; index += 1) {
       const seed = room.level * 83 + index * 29;
       const type = room.kind === "boss" ? "spike" : seeded(seed) < .45 ? "rock" : seeded(seed + 4) < .72 ? "urn" : "spike";
       game.obstacles.push({
-        x: 300 + seeded(seed + 7) * 500,
-        y: 135 + seeded(seed + 13) * 270,
+        x: WALL + 240 + seeded(seed + 7) * (ROOM_WIDTH - WALL * 2 - 330),
+        y: WALL + 90 + seeded(seed + 13) * (ROOM_HEIGHT - WALL * 2 - 180),
         radius: type === "rock" ? 25 : type === "urn" ? 17 : 20,
         type,
         hp: type === "rock" ? Infinity : type === "urn" ? 3 : Infinity,
@@ -757,8 +785,8 @@
     let x;
     let y;
     do {
-      x = random(boss ? 430 : 330, ROOM_WIDTH - 90);
-      y = random(90, ROOM_HEIGHT - 90);
+      x = random(boss ? ROOM_WIDTH * .48 : ROOM_WIDTH * .3, ROOM_WIDTH - WALL - 58);
+      y = random(WALL + 54, ROOM_HEIGHT - WALL - 54);
     } while (Math.hypot(x - game.player.x, y - game.player.y) < 220);
     const elite = game.rooms[game.room].kind === "elite" && !boss;
     const affixKeys = Object.keys(eliteAffixes);
@@ -766,6 +794,7 @@
     if (affix) game.affixesSeen[affix] = (game.affixesSeen[affix] || 0) + 1;
     const enemy = {
       id: ++enemySerial, type, x, y, radius: boss ? bossProfile.radius : bomber ? 22 : turret ? 20 : splitter ? 19 : cultist ? 18 : charger ? 18 : leech ? 12 : bat ? 13 : 16,
+      baseRadius: boss ? bossProfile.radius : null,
       hp: Math.ceil(baseHp * levelScale * (elite ? 1.55 : 1)),
       maxHp: Math.ceil(baseHp * levelScale * (elite ? 1.55 : 1)),
       speed: (boss ? bossProfile.speed : bomber ? 48 : turret ? 30 : splitter ? 56 : cultist ? 68 : charger ? 80 : leech ? 150 : bat ? 138 : random(64, 92)) * (room.modifier === "frenzy" ? 1.24 : 1) * (affix === "frenzied" ? 1.22 : 1),
@@ -781,8 +810,8 @@
       targetX: 0, targetY: 0, submerged: false, invulnerable: false, orbsSpawned: 0, dead: false
     };
     if (boss && ["bossIdol", "bossMatron", "bossHeart", "bossInfernal"].includes(type)) {
-      enemy.x = ROOM_WIDTH / 2 + 70;
-      enemy.y = type === "bossInfernal" ? 125 : ROOM_HEIGHT / 2;
+      enemy.x = ROOM_WIDTH / 2 + 80;
+      enemy.y = type === "bossInfernal" ? ROOM_HEIGHT * .23 : ROOM_HEIGHT / 2;
     }
     game.enemies.push(enemy);
   }
@@ -1451,6 +1480,7 @@
 
   function damageEnemy(enemy, amount, source) {
     if (!enemy || enemy.dead) return;
+    const statusTick = Boolean(source && source.statusTick);
     if (enemy.invulnerable && !(source && source.forceDamage)) {
       if ((enemy.guardTextCooldown || 0) <= 0) {
         enemy.guardTextCooldown = .6;
@@ -1458,9 +1488,9 @@
       }
       return;
     }
-    if (enemy.stageTransition > 0 && !(source && source.statusTick)) {
+    if (enemy.stageTransition > 0) {
       const deflectAngle = source && Number.isFinite(source.vx) ? Math.atan2(source.vy, source.vx) + Math.PI : 0;
-      directionalBurst(enemy.x, enemy.y, deflectAngle, "#d9c4a0", 5, 110);
+      if (!statusTick) directionalBurst(enemy.x, enemy.y, deflectAngle, "#d9c4a0", 5, 110);
       return;
     }
     const critical = Boolean(source && source.critical);
@@ -1485,11 +1515,17 @@
       }
       directionalBurst(enemy.x, enemy.y, Math.atan2(guardian.y - enemy.y, guardian.x - enemy.x), "#75c89c", 4, 80);
     }
+    if (isBoss(enemy) && !(source && source.forceDamage)) {
+      const hitCap = enemy.maxHp * (statusTick ? .018 : source && source.skill ? .1 : .06);
+      amount = Math.min(amount, hitCap);
+      const phaseFloor = enemy.bossStage === 1 ? enemy.maxHp * BOSS_STAGE_TWO_RATIO : enemy.bossStage === 2 ? enemy.maxHp * BOSS_STAGE_THREE_RATIO : 0;
+      amount = Math.min(amount, Math.max(0, enemy.hp - phaseFloor));
+      if (amount <= .001) return;
+    }
     const previousHp = enemy.hp;
     enemy.hp -= amount;
     enemy.flash = .12;
     enemy.squash = Math.max(enemy.squash || 0, critical ? .72 : .38);
-    const statusTick = Boolean(source && source.statusTick);
     if (!statusTick) hitStop = Math.max(hitStop, source && source.skill ? .055 : critical ? .045 : .018);
     screenShake = Math.max(screenShake, statusTick ? 0 : source && source.skill ? 7 : critical ? 5 : 2.5);
     const statusColors = { burn: "#f18a4f", poison: "#8dcb68", bleed: "#df5570", shock: "#c9b6ff" };
@@ -1738,15 +1774,19 @@
 
   function updateBossStage(enemy, dt) {
     const healthRatio = enemy.hp / enemy.maxHp;
-    const nextStage = healthRatio <= .33 ? 3 : healthRatio <= .67 ? 2 : 1;
+    const nextStage = healthRatio <= BOSS_STAGE_THREE_RATIO + .0001 ? 3 : healthRatio <= BOSS_STAGE_TWO_RATIO + .0001 ? 2 : 1;
     if (nextStage > enemy.bossStage) {
       enemy.bossStage = nextStage;
-      enemy.stageTransition = 1.15;
-      enemy.cooldown = 1.05;
+      enemy.radius = enemy.baseRadius * (nextStage === 3 ? 1.22 : 1.1);
+      enemy.stageTransition = nextStage === 3 ? 1.9 : 1.55;
+      enemy.cooldown = .8;
       enemy.signatureCooldown = .75;
       enemy.spawnCooldown = Math.min(enemy.spawnCooldown, 1.2);
       enemy.squash = 1;
       game.enemyBullets.length = 0;
+      game.bossLasers.length = 0;
+      game.bossWaves.length = 0;
+      game.arenaInset = nextStage === 3 ? 18 : 8;
       enemy.invulnerable = false;
       enemy.submerged = false;
       enemy.intangible = false;
@@ -1759,7 +1799,10 @@
       }
       screenShake = nextStage === 3 ? 18 : 14;
       const label = bossStageNames[enemy.type]?.[nextStage - 1] || "狂怒";
-      game.texts.push({ text: `阶段 ${nextStage} · ${label}`, x: ROOM_WIDTH / 2, y: 128, life: 2.2, color: nextStage === 3 ? "#ff8269" : "#f5d28a" });
+      const escalation = nextStage === 3 ? "最终狂怒 · 双重攻击解禁" : "躯体异变 · 新攻击解禁";
+      game.texts.push({ text: `阶段 ${nextStage} · ${label}`, x: ROOM_WIDTH / 2, y: 136, life: 2.4, color: nextStage === 3 ? "#ff7898" : "#82ead8", size: 24 });
+      game.texts.push({ text: escalation, x: ROOM_WIDTH / 2, y: 168, life: 2.2, color: nextStage === 3 ? "#ffc0c9" : "#c3fff2", size: 14 });
+      sound(nextStage === 3 ? 66 : 92, .48, "sawtooth", .04);
     }
     if (enemy.stageTransition > 0) {
       enemy.stageTransition -= dt;
@@ -1803,13 +1846,13 @@
     enemy.laserDirections = options.directions || [];
     enemy.laserOriginX = options.originX ?? enemy.x;
     enemy.laserOriginY = options.originY ?? enemy.y;
-    enemy.laserLength = options.length ?? 760;
+    enemy.laserLength = options.length ?? ARENA_DIAGONAL;
     enemy.laserWidth = options.width ?? 24;
     enemy.intangible = mode === "jump" || mode.startsWith("burrow");
     if (options.invulnerable !== undefined) enemy.invulnerable = options.invulnerable;
   }
 
-  function fireBossLaser(enemy, angle, originX = enemy.x, originY = enemy.y, length = 760, widthValue = 24) {
+  function fireBossLaser(enemy, angle, originX = enemy.x, originY = enemy.y, length = ARENA_DIAGONAL, widthValue = 24) {
     game.bossLasers.push({ x: originX, y: originY, angle, length, width: widthValue, life: .24, maxLife: .24, stage: enemy.bossStage, kind: "灼热光束" });
     const dx = game.player.x - originX;
     const dy = game.player.y - originY;
@@ -1886,15 +1929,15 @@
     enemy.signatureCooldown -= dt;
     if (enemy.signatureCooldown > 0) return;
     if (enemy.bossStage === 2) {
-      radialFireAtSpeed(enemy, 10, 145, enemy.phase + Math.PI / 10);
-      enemyFire(enemy, 3, .24);
-      enemy.signatureCooldown = 4.2;
+      radialFireAtSpeed(enemy, 12, 155, enemy.phase + Math.PI / 12);
+      enemyFire(enemy, 5, .2);
+      enemy.signatureCooldown = 3.6;
       game.texts.push({ text: `${bossStageNames[enemy.type][1]} · 变异弹幕`, x: enemy.x, y: enemy.y - enemy.radius - 30, life: .9, color: "#8cebd8", size: 13 });
     } else {
-      radialFireAtSpeed(enemy, 12, 150, enemy.phase);
-      radialFireAtSpeed(enemy, 8, 225, enemy.phase + Math.PI / 8);
+      radialFireAtSpeed(enemy, 16, 165, enemy.phase);
+      radialFireAtSpeed(enemy, 10, 235, enemy.phase + Math.PI / 10);
       addBossHazard(clamp(game.player.x + random(-55, 55), WALL + 45, ROOM_WIDTH - WALL - 45), clamp(game.player.y + random(-55, 55), WALL + 45, ROOM_HEIGHT - WALL - 45), 34, 2.8, "狂怒裂隙");
-      enemy.signatureCooldown = 2.8;
+      enemy.signatureCooldown = 2.25;
       game.texts.push({ text: `${bossStageNames[enemy.type][2]} · 狂怒齐射`, x: enemy.x, y: enemy.y - enemy.radius - 34, life: 1, color: "#ff7898", size: 14 });
     }
   }
@@ -1963,8 +2006,8 @@
   }
 
   function updateIdolBoss(enemy, angle, playerDistance, dt) {
-    enemy.x += (ROOM_WIDTH / 2 + 70 - enemy.x) * .18;
-    enemy.y += (125 - enemy.y) * .18;
+    enemy.x += (ROOM_WIDTH / 2 + 80 - enemy.x) * .18;
+    enemy.y += (ROOM_HEIGHT * .23 - enemy.y) * .18;
     enemy.spawnCooldown -= dt;
     if (enemy.cooldown <= 0) {
       if (enemy.bossStage >= 2 && Math.random() < .42) {
@@ -2071,7 +2114,7 @@
     }
     if (enemy.bossStage === 2) {
       enemy.x += Math.sin(enemy.phase * .8) * enemy.speed * dt;
-      enemy.y += (125 - enemy.y) * dt * 2.5;
+      enemy.y += (ROOM_HEIGHT * .23 - enemy.y) * dt * 2.5;
       if (enemy.cooldown <= 0) {
         if (Math.random() < .45) startBossTelegraph(enemy, "laser", .72, { directions: [Math.PI / 2 - .2, Math.PI / 2 + .2], width: 22 });
         else enemyFire(enemy, 9, .13);
@@ -2115,7 +2158,7 @@
     if (enemy.spawnCooldown <= 0) {
       const oldX = enemy.x;
       const oldY = enemy.y;
-      enemy.x = random(300, ROOM_WIDTH - 110);
+      enemy.x = random(WALL + 230, ROOM_WIDTH - WALL - 62);
       enemy.y = random(110, ROOM_HEIGHT - 110);
       burst(oldX, oldY, "#a56891", 18, 150);
       burst(enemy.x, enemy.y, "#e986a8", 18, 150);
@@ -2124,7 +2167,8 @@
   }
 
   function spawnBossWave(x, y, speed, damage = 1) {
-    game.bossWaves.push({ x, y, radius: 18, maxRadius: 430, speed, damage, hit: false, life: 2.4, maxLife: 2.4, kind: "心跳冲击" });
+    const life = ARENA_DIAGONAL / speed + .35;
+    game.bossWaves.push({ x, y, radius: 18, maxRadius: ARENA_DIAGONAL, speed, damage, hit: false, life, maxLife: life, kind: "心跳冲击" });
     shockwave(x, y, "#df5877", 12);
   }
 
@@ -2381,6 +2425,7 @@
     }
     game.state = "ended";
     game.outcome = won ? "victory" : "defeat";
+    gameShell.classList.remove("playing");
     touchUi.classList.remove("active");
     document.querySelector("#end-kicker").textContent = won ? "DUNGEON CLEARED" : "RUN OVER";
     document.querySelector("#end-title").textContent = won ? "地牢已净化" : "你倒在了门前";
@@ -2558,9 +2603,9 @@
     context.globalAlpha = .3;
     context.strokeStyle = "#171217";
     context.lineWidth = 2;
-    for (let index = 0; index < 8; index += 1) {
-      const x = 90 + seeded(seed + index * 29) * 760;
-      const y = 95 + seeded(seed + index * 31) * 350;
+    for (let index = 0; index < 11; index += 1) {
+      const x = WALL + 46 + seeded(seed + index * 29) * (ROOM_WIDTH - WALL * 2 - 92);
+      const y = WALL + 42 + seeded(seed + index * 31) * (ROOM_HEIGHT - WALL * 2 - 84);
       context.beginPath();
       context.moveTo(x, y);
       context.lineTo(x + seeded(seed + index * 37) * 22 - 11, y + 10);
@@ -2572,9 +2617,9 @@
 
   function drawRoomProps(seed, theme, palette) {
     context.save();
-    for (let index = 0; index < 6; index += 1) {
-      const x = 255 + seeded(seed + index * 43) * 600;
-      const y = 205 + seeded(seed + index * 47) * 250;
+    for (let index = 0; index < 9; index += 1) {
+      const x = WALL + 190 + seeded(seed + index * 43) * (ROOM_WIDTH - WALL * 2 - 290);
+      const y = WALL + 130 + seeded(seed + index * 47) * (ROOM_HEIGHT - WALL * 2 - 220);
       const angle = seeded(seed + index * 53) * TAU;
       context.save();
       context.translate(x, y);
@@ -2681,11 +2726,11 @@
     context.save();
     context.globalAlpha = .4;
     context.fillStyle = room.kind === "shop" ? "#543e2b" : palette.glow;
-    context.beginPath(); context.ellipse(ROOM_WIDTH / 2 + 45, ROOM_HEIGHT / 2 + 12, 245, 112, 0, 0, TAU); context.fill();
+    context.beginPath(); context.ellipse(ROOM_WIDTH / 2, ROOM_HEIGHT / 2 + 12, 285, 132, 0, 0, TAU); context.fill();
     context.globalAlpha = .32;
     context.strokeStyle = "#e3bc68";
     context.lineWidth = 3;
-    context.beginPath(); context.ellipse(ROOM_WIDTH / 2 + 45, ROOM_HEIGHT / 2 + 12, 230, 98, 0, 0, TAU); context.stroke();
+    context.beginPath(); context.ellipse(ROOM_WIDTH / 2, ROOM_HEIGHT / 2 + 12, 268, 116, 0, 0, TAU); context.stroke();
     context.globalAlpha = 1;
     if (room.kind === "shop") {
       context.translate(ROOM_WIDTH / 2 + 45, 154);
@@ -3340,7 +3385,8 @@
     drawBossStageAura(enemy);
     context.restore();
     context.save();
-    const stageScale = 1.28 + (enemy.bossStage - 1) * .075;
+    const transitionPulse = enemy.stageTransition > 0 ? Math.sin(enemy.stageTransition * 18) * .07 : 0;
+    const stageScale = [1.38, 1.62, 1.88][enemy.bossStage - 1] + transitionPulse;
     context.scale(stageScale, stageScale);
     if (enemy.type === "bossHeart") drawHeartBoss(enemy);
     else if (enemy.type === "bossDevourer") drawBroodBoss(enemy);
@@ -3358,24 +3404,30 @@
     const stageThree = enemy.bossStage === 3;
     const color = stageThree ? "#ff527d" : "#75e1d0";
     context.save();
-    context.globalAlpha = .42 + Math.sin(game.elapsed * (stageThree ? 9 : 5) + enemy.id) * .13;
+    context.globalAlpha = .5 + Math.sin(game.elapsed * (stageThree ? 9 : 5) + enemy.id) * .15;
     context.strokeStyle = color;
     context.shadowColor = color;
-    context.shadowBlur = stageThree ? 24 : 14;
-    context.lineWidth = stageThree ? 4 : 3;
+    context.shadowBlur = stageThree ? 34 : 20;
+    context.lineWidth = stageThree ? 6 : 4;
     context.setLineDash(stageThree ? [13, 7] : [5, 9]);
     context.beginPath();
-    context.arc(0, 0, enemy.radius + 17 + Math.sin(game.elapsed * 4) * 4, -game.elapsed, TAU - game.elapsed);
+    context.arc(0, 0, enemy.radius + 23 + Math.sin(game.elapsed * 4) * 5, -game.elapsed, TAU - game.elapsed);
     context.stroke();
     context.setLineDash([]);
     const runeCount = stageThree ? 8 : 5;
     for (let index = 0; index < runeCount; index += 1) {
       const angle = game.elapsed * (stageThree ? -.8 : .5) + index / runeCount * TAU;
-      const radius = enemy.radius + (stageThree ? 28 : 22);
+      const radius = enemy.radius + (stageThree ? 38 : 30);
       context.fillStyle = color;
       context.beginPath();
       context.arc(Math.cos(angle) * radius, Math.sin(angle) * radius, stageThree ? 4 : 3, 0, TAU);
       context.fill();
+    }
+    if (enemy.stageTransition > 0) {
+      const pulse = enemy.radius + 48 + Math.sin(enemy.stageTransition * 16) * 12;
+      context.globalAlpha = .22;
+      context.fillStyle = color;
+      context.beginPath(); context.arc(0, 0, pulse, 0, TAU); context.fill();
     }
     context.restore();
   }
@@ -3410,6 +3462,27 @@
       }
       context.globalAlpha = 1;
     }
+    context.save();
+    const mutationColor = stageThree ? "#ff6c91" : "#8af2dd";
+    context.fillStyle = mutationColor;
+    context.strokeStyle = stageThree ? "#561629" : "#244d47";
+    context.shadowColor = mutationColor;
+    context.shadowBlur = stageThree ? 18 : 10;
+    context.lineWidth = 3;
+    for (const side of [-1, 1]) {
+      context.beginPath();
+      context.moveTo(side * enemy.radius * .42, -enemy.radius * .55);
+      context.lineTo(side * (enemy.radius + (stageThree ? 30 : 18)), -enemy.radius * .92);
+      context.lineTo(side * enemy.radius * .8, -enemy.radius * .18);
+      context.closePath(); context.fill(); context.stroke();
+    }
+    if (stageThree) {
+      context.fillStyle = "#fff1b7";
+      context.beginPath(); context.ellipse(0, -enemy.radius * .48, 10, 6, 0, 0, TAU); context.fill();
+      context.fillStyle = "#551225";
+      context.beginPath(); context.arc(0, -enemy.radius * .48, 3.5, 0, TAU); context.fill();
+    }
+    context.restore();
   }
 
   function drawCodexBoss(enemy) {
@@ -3598,7 +3671,7 @@
 
   function drawHealthBar(enemy) {
     const boss = isBoss(enemy);
-    const barWidth = boss ? 300 : 52;
+    const barWidth = boss ? 420 : 52;
     const y = boss ? ROOM_HEIGHT - 26 : enemy.y - enemy.radius - 14;
     const x = boss ? ROOM_WIDTH / 2 - barWidth / 2 : enemy.x - barWidth / 2;
     context.fillStyle = "#161218";
@@ -3614,7 +3687,7 @@
       context.textAlign = "center";
       const guard = enemy.invulnerable ? " · 甲壳封闭" : enemy.type === "bossBurrow" ? " · 尾部可伤" : "";
       const threat = bossStats(enemy);
-      context.fillText(`${game.rooms[game.room].name} · 阶段 ${enemy.bossStage} ${bossStageNames[enemy.type][enemy.bossStage - 1]} · 攻击 ×${threat.damage.toFixed(2)}${guard}`, ROOM_WIDTH / 2, y - 7);
+      context.fillText(`${game.rooms[game.room].name} · 阶段 ${enemy.bossStage} ${bossStageNames[enemy.type][enemy.bossStage - 1]} · HP ${Math.ceil(enemy.hp)}/${enemy.maxHp} · 威胁 ×${threat.damage.toFixed(2)}${guard}`, ROOM_WIDTH / 2, y - 7);
       context.textAlign = "left";
     }
   }
@@ -3669,21 +3742,21 @@
         context.save();
         context.translate(enemy.x, enemy.y);
         context.rotate(enemy.chargeAngle);
-        const warning = context.createLinearGradient(enemy.radius, 0, 360, 0);
+        const warning = context.createLinearGradient(enemy.radius, 0, 520, 0);
         warning.addColorStop(0, `rgba(255, 183, 76, ${.24 + strength * .22})`);
         warning.addColorStop(1, "rgba(222, 53, 43, 0)");
         context.fillStyle = warning;
         context.beginPath();
         context.moveTo(enemy.radius, -8 - strength * 5);
-        context.lineTo(360, -2);
-        context.lineTo(360, 2);
+        context.lineTo(520, -2);
+        context.lineTo(520, 2);
         context.lineTo(enemy.radius, 8 + strength * 5);
         context.closePath();
         context.fill();
         context.strokeStyle = `rgba(255, 101, 67, ${.48 + strength * .45})`;
         context.lineWidth = 2 + strength * 2;
         context.setLineDash([10, 8]);
-        context.beginPath(); context.moveTo(enemy.radius, 0); context.lineTo(330, 0); context.stroke();
+        context.beginPath(); context.moveTo(enemy.radius, 0); context.lineTo(490, 0); context.stroke();
         context.setLineDash([]);
         context.restore();
       }
@@ -4153,15 +4226,15 @@
     context.textAlign = "center";
     context.fillStyle = "#f3dfb6";
     context.font = "900 30px system-ui";
-    context.fillText(game.routeChoice.title || "前路需要代价", ROOM_WIDTH / 2, 132);
+    context.fillText(game.routeChoice.title || "前路需要代价", ROOM_WIDTH / 2, 176);
     context.fillStyle = "#aa9987";
     context.font = "700 13px system-ui";
-    context.fillText(game.routeChoice.subtitle || "选择安全恢复，或接受强化精英以争取额外构筑", ROOM_WIDTH / 2, 158);
+    context.fillText(game.routeChoice.subtitle || "选择安全恢复，或接受强化精英以争取额外构筑", ROOM_WIDTH / 2, 206);
     game.routeChoice.options.forEach((option, index) => {
-      const x = index === 0 ? 176 : 504;
-      const y = 190;
-      const widthValue = 280;
-      const heightValue = 180;
+      const x = (ROOM_WIDTH - ROUTE_CARD_WIDTH * 2 - ROUTE_CARD_GAP) / 2 + index * (ROUTE_CARD_WIDTH + ROUTE_CARD_GAP);
+      const y = ROUTE_CARD_Y;
+      const widthValue = ROUTE_CARD_WIDTH;
+      const heightValue = ROUTE_CARD_HEIGHT;
       const glow = context.createLinearGradient(x, y, x, y + heightValue);
       glow.addColorStop(0, `${option.color}4d`);
       glow.addColorStop(1, "rgba(24, 18, 22, .96)");
@@ -4175,14 +4248,14 @@
       context.fillText(`${index + 1}`, x + widthValue / 2, y + 30);
       context.fillStyle = "#f5e5c6";
       context.font = "900 23px system-ui";
-      context.fillText(option.name, x + widthValue / 2, y + 76);
+      context.fillText(option.name, x + widthValue / 2, y + 82);
       context.fillStyle = "#c9b9a4";
       context.font = "700 13px system-ui";
       const details = option.detail.split("，");
-      details.forEach((detail, line) => context.fillText(detail, x + widthValue / 2, y + 112 + line * 23));
+      details.forEach((detail, line) => context.fillText(detail, x + widthValue / 2, y + 122 + line * 23));
       context.fillStyle = option.color;
       context.font = "800 12px system-ui";
-      context.fillText(option.badge, x + widthValue / 2, y + 158);
+      context.fillText(option.badge, x + widthValue / 2, y + 176);
     });
     context.textAlign = "left";
   }
@@ -4201,6 +4274,8 @@
   }
 
   window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", resize);
+  document.addEventListener("fullscreenchange", resize);
   const keyAliases = {
     w: "KeyW", a: "KeyA", s: "KeyS", d: "KeyD",
     ArrowUp: "ArrowUp", ArrowDown: "ArrowDown",
@@ -4269,9 +4344,11 @@
   });
   canvas.addEventListener("pointerdown", event => {
     const point = toRoom(event.clientX, event.clientY);
-    if (game && game.routeChoice && point.y >= 180 && point.y <= 390) {
-      if (point.x >= 176 && point.x <= 456) chooseRoute(game.routeChoice.options[0].id);
-      if (point.x >= 504 && point.x <= 784) chooseRoute(game.routeChoice.options[1].id);
+    if (game && game.routeChoice && point.y >= ROUTE_CARD_Y && point.y <= ROUTE_CARD_Y + ROUTE_CARD_HEIGHT) {
+      const firstX = (ROOM_WIDTH - ROUTE_CARD_WIDTH * 2 - ROUTE_CARD_GAP) / 2;
+      const secondX = firstX + ROUTE_CARD_WIDTH + ROUTE_CARD_GAP;
+      if (point.x >= firstX && point.x <= firstX + ROUTE_CARD_WIDTH) chooseRoute(game.routeChoice.options[0].id);
+      if (point.x >= secondX && point.x <= secondX + ROUTE_CARD_WIDTH) chooseRoute(game.routeChoice.options[1].id);
       event.preventDefault();
       return;
     }
@@ -4366,8 +4443,9 @@
     document.querySelectorAll(".weapon-card").forEach(card => card.classList.remove("selected"));
     button.classList.add("selected");
   }));
-  document.querySelector("#start-button").addEventListener("click", newGame);
-  document.querySelector("#restart-button").addEventListener("click", newGame);
+  document.querySelector("#start-button").addEventListener("click", () => { requestLandscapeMode(); newGame(); });
+  document.querySelector("#restart-button").addEventListener("click", () => { requestLandscapeMode(); newGame(); });
+  fullscreenButton.addEventListener("click", requestLandscapeMode);
   document.querySelector("#guide-button").addEventListener("click", () => setGuideOpen(!guideOpen));
   document.querySelector("#guide-close").addEventListener("click", () => setGuideOpen(false));
   document.querySelector("#workshop-button").addEventListener("click", () => setWorkshopOpen(!workshopOpen));
@@ -4391,7 +4469,10 @@
         workshopOpen,
         viewport: {
           width, height, scaleX: scale, scaleY: verticalScale, offsetX, offsetY,
-          roomDisplayWidth: ROOM_WIDTH * scale, roomDisplayHeight: ROOM_HEIGHT * verticalScale
+          roomWidth: ROOM_WIDTH, roomHeight: ROOM_HEIGHT,
+          roomDisplayWidth: ROOM_WIDTH * scale, roomDisplayHeight: ROOM_HEIGHT * verticalScale,
+          gridColumns: Math.floor((ROOM_WIDTH - WALL * 2) / 64), gridRows: Math.floor((ROOM_HEIGHT - WALL * 2) / 54),
+          landscape: width > height
         },
         outcome: game.outcome || null,
         room: game.room,
@@ -4411,7 +4492,7 @@
         plannedEnemyTypes: game.rooms.flatMap(room => room.enemies),
         enemyTypes: game.enemies.map(enemy => enemy.type),
         enemyHealth: game.enemies.map(enemy => enemy.hp),
-        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, bossStage: enemy.bossStage, bossStats: isBoss(enemy) ? { ...bossStats(enemy) } : null, attackMode: enemy.attackMode, telegraph: enemy.telegraph, invulnerable: enemy.invulnerable, statuses: { ...enemy.statuses } })),
+        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, maxHp: enemy.maxHp, radius: enemy.radius, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, bossStage: enemy.bossStage, stageTransition: enemy.stageTransition, bossStats: isBoss(enemy) ? { ...bossStats(enemy) } : null, attackMode: enemy.attackMode, telegraph: enemy.telegraph, invulnerable: enemy.invulnerable, statuses: { ...enemy.statuses } })),
         doorOpen: game.doorOpen,
         pickupTypes: game.pickups.map(pickup => pickup.type),
         shopOffers: game.pickups.filter(pickup => pickup.shopItem && !pickup.dead).map(pickup => ({
@@ -4537,6 +4618,11 @@
       const boss = game && game.enemies.find(enemy => isBoss(enemy));
       if (!boss) return;
       boss.hp = Math.max(1, boss.maxHp * clamp(ratio, .01, 1));
+    },
+    damageBoss(amount, skill = false) {
+      const boss = game && game.enemies.find(enemy => isBoss(enemy));
+      if (!boss) return;
+      damageEnemy(boss, Math.max(0, amount), { x: game.player.x, y: game.player.y, skill });
     },
     hurt(amount = 1) {
       if (!game || game.state !== "playing") return;

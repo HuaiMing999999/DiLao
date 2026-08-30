@@ -2,7 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#17151d">
   <title>弹壳地牢 · Dungeon Dodge</title>
   <link rel="stylesheet" href="style.css">
@@ -10,6 +11,9 @@
 <body>
   <main id="game-shell">
     <canvas id="game" tabindex="0" aria-label="弹壳地牢游戏画面"></canvas>
+
+    <button id="fullscreen-button" type="button" aria-label="进入手机横屏全屏模式">⛶ 横屏全屏</button>
+    <div id="rotate-hint" aria-hidden="true"><b>旋转手机横屏</b><span>进入 16:9 完整战场，视野和操作更舒适</span></div>
 
     <button id="workshop-button" type="button" aria-label="打开农场与锻造工坊">农场 · 工坊</button>
     <button id="guide-button" type="button" aria-label="打开遗物图鉴">I · 道具图鉴</button>
@@ -77,7 +81,7 @@
         </div>
         <button id="start-button">推开地窖之门</button>
         <p id="meta-progress" class="meta-progress">远征 0 · 通关 0 · Boss 印记 0 · 最佳击杀 0</p>
-        <p class="small">原创代码绘制 · 支持键鼠与手机触控</p>
+        <p class="small">原创代码绘制 · 支持键鼠与手机横屏触控</p>
       </div>
       <p class="author-credit"><span>作者 · 彭铭旭</span><b>MINOS</b></p>
     </section>

@@ -20,6 +20,46 @@ body { touch-action: none; }
 
 #game-shell { position: relative; width: 100%; height: 100%; }
 
+#fullscreen-button {
+  display: none;
+  position: absolute;
+  z-index: 6;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border-color: #6e7e91;
+  color: #e5edf4;
+  background: linear-gradient(#33404de8, #171d24e8);
+  box-shadow: 0 4px 14px #0009, inset 0 1px #7c91a5;
+  font-size: 10px;
+}
+
+#fullscreen-button:hover { transform: translateX(-50%) translateY(-1px); }
+#fullscreen-button:active { transform: translateX(-50%) translateY(2px); }
+
+#rotate-hint {
+  display: none;
+  position: absolute;
+  z-index: 5;
+  top: max(54px, calc(env(safe-area-inset-top) + 42px));
+  left: 50%;
+  width: min(310px, calc(100vw - 36px));
+  transform: translateX(-50%);
+  padding: 10px 14px;
+  border: 1px solid #c7a66d99;
+  border-radius: 12px;
+  color: #eadbbd;
+  background: #171319e8;
+  box-shadow: 0 8px 28px #000a, inset 0 1px #675447;
+  text-align: center;
+  pointer-events: none;
+}
+
+#rotate-hint b, #rotate-hint span { display: block; }
+#rotate-hint b { color: #f4c96f; font-size: 14px; }
+#rotate-hint span { margin-top: 3px; color: #b6a995; font-size: 10px; }
+
 #guide-button,
 #workshop-button {
   position: absolute;
@@ -327,6 +367,7 @@ button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71382c; }
 #stick-knob { position: absolute; width: 50px; height: 50px; left: 32px; top: 32px; border-radius: 54% 46% 52% 48%; background: radial-gradient(circle at 35% 30%, #d9bd79aa, #806c4c99); border: 3px solid #e4cc91aa; box-shadow: 0 5px 12px #0007; }
 
 @media (pointer: coarse), (max-width: 760px) {
+  #fullscreen-button { display: block; }
   #guide-button { top: 8px; right: 8px; padding: 7px 9px; font-size: 10px; }
   #workshop-button { top: 8px; left: 8px; padding: 7px 9px; font-size: 10px; }
   .guide-panel { padding: 10px; }
@@ -349,4 +390,21 @@ button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71382c; }
   .author-credit { right: 12px; bottom: 10px; padding: 6px 9px; }
   .author-credit span { font-size: 10px; }
   .author-credit b { font-size: 12px; }
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  #game-shell.playing #rotate-hint { display: block; }
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  #fullscreen-button { top: max(5px, env(safe-area-inset-top)); padding: 5px 10px; opacity: .82; }
+  #guide-button { top: max(5px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); }
+  #workshop-button { top: max(5px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); }
+  #stick-zone { left: max(16px, calc(env(safe-area-inset-left) + 8px)); bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); width: 104px; height: 104px; }
+  #stick-knob { left: 25px; top: 25px; }
+  #fire-button { right: max(18px, calc(env(safe-area-inset-right) + 8px)); bottom: max(18px, calc(env(safe-area-inset-bottom) + 8px)); width: 76px; height: 76px; }
+  #dash-button { right: max(104px, calc(env(safe-area-inset-right) + 94px)); bottom: max(84px, calc(env(safe-area-inset-bottom) + 74px)); width: 52px; height: 52px; }
+  #skill-button { right: max(112px, calc(env(safe-area-inset-right) + 102px)); bottom: max(18px, calc(env(safe-area-inset-bottom) + 8px)); width: 56px; height: 56px; }
+  .screen { padding: 8px max(54px, env(safe-area-inset-right)) 8px max(54px, env(safe-area-inset-left)); }
+  .screen-panel { max-height: calc(100vh - 16px); padding: 22px 16px 14px; }
 }

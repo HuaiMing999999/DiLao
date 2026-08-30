@@ -74,6 +74,8 @@ step(2);
 
 let state = game.getState();
 assert(state.hero === "seer", "Hero selection failed");
+assert(state.viewport.roomWidth === 1280 && state.viewport.roomHeight === 720, "Expanded 16:9 combat arena is missing");
+assert(state.viewport.gridColumns >= 18 && state.viewport.gridRows >= 11, "Expanded combat grid is too small");
 assert(state.roomCount === 55, `Expected 55 rooms, got ${state.roomCount}`);
 assert(state.roomKinds.filter(kind => kind === "boss").length === 11, "Expected 11 boss rooms");
 assert(state.roomKinds.filter(kind => kind === "treasure").length === 11, "Expected 11 treasure rooms");
@@ -258,6 +260,28 @@ game.exitRoom();
 step(6);
 state = game.getState();
 assert(state.roomType === "elite" && state.roomModifier === "cursed", "Risk route encounter failed");
+
+game.start();
+step();
+for (let index = 0; index < 20; index += 1) game.giveItem("shield");
+game.goToRoom(4);
+step(2);
+let durabilityBoss = game.getState().enemies.find(enemy => enemy.type.startsWith("boss"));
+assert(durabilityBoss.maxHp >= 88, "Boss durability was not rebalanced");
+for (let index = 0; index < 4; index += 1) game.damageBoss(9999, true);
+durabilityBoss = game.getState().enemies.find(enemy => enemy.type.startsWith("boss"));
+assert(durabilityBoss.hp >= durabilityBoss.maxHp * 2 / 3 - .01, "A single burst skipped the first boss phase gate");
+step(8);
+durabilityBoss = game.getState().enemies.find(enemy => enemy.type.startsWith("boss"));
+assert(game.getState().bossStage === 2 && durabilityBoss.stageTransition > 0, "Boss stage-two transformation did not trigger");
+step(120);
+for (let index = 0; index < 4; index += 1) game.damageBoss(9999, true);
+step(8);
+assert(game.getState().bossStage === 3, "Boss stage-three transformation did not trigger");
+step(130);
+game.damageBoss(9999, true);
+durabilityBoss = game.getState().enemies.find(enemy => enemy.type.startsWith("boss"));
+assert(durabilityBoss && durabilityBoss.hp > 0, "Boss was defeated by one oversized phase-three hit");
 
 for (const bossRoom of [4, 9, 14, 19, 24, 29, 34, 39, 44, 49, 54]) {
   game.start();
