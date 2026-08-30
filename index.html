@@ -11,6 +11,7 @@
   <main id="game-shell">
     <canvas id="game" tabindex="0" aria-label="弹壳地牢游戏画面"></canvas>
 
+    <button id="workshop-button" type="button" aria-label="打开农场与锻造工坊">农场 · 工坊</button>
     <button id="guide-button" type="button" aria-label="打开遗物图鉴">I · 道具图鉴</button>
 
     <section id="guide-panel" class="guide-panel" aria-hidden="true">
@@ -25,6 +26,24 @@
         <div id="guide-summary" class="guide-summary"></div>
         <div id="guide-items" class="guide-items"></div>
         <p class="guide-footnote">按 <b>I</b> 或 <b>Esc</b> 返回战斗；打开图鉴时游戏自动暂停。</p>
+      </div>
+    </section>
+
+    <section id="workshop-panel" class="workshop-panel" aria-hidden="true">
+      <div class="workshop-book">
+        <header class="guide-header">
+          <div>
+            <div class="eyebrow">HOMESTEAD & FORGE</div>
+            <h2>幽烬农场</h2>
+          </div>
+          <button id="workshop-close" type="button" aria-label="关闭农场与工坊">关闭 ×</button>
+        </header>
+        <div id="workshop-inventory" class="workshop-inventory"></div>
+        <h3 class="workshop-title">种植地块</h3>
+        <div id="farm-plots" class="farm-plots"></div>
+        <h3 class="workshop-title">武器图纸</h3>
+        <div id="forge-recipes" class="forge-recipes"></div>
+        <p class="guide-footnote">击败敌人获得种子，Boss 会带来稀有图纸；种植后收获锻造材料。</p>
       </div>
     </section>
 
@@ -45,11 +64,14 @@
           <button class="weapon-card" data-weapon="scatter"><b>霰火心脏</b><em>近距爆发</em></button>
           <button class="weapon-card" data-weapon="wisp"><b>游魂提灯</b><em>击败 1 个 Boss 解锁</em></button>
           <button class="weapon-card" data-weapon="cleaver"><b>锯齿祭刃</b><em>击败 3 个 Boss 解锁</em></button>
+          <button class="weapon-card" data-weapon="seeker"><b>追魂蜂巢</b><em>在工坊锻造</em></button>
+          <button class="weapon-card" data-weapon="prism"><b>星陨棱镜</b><em>在工坊锻造</em></button>
+          <button class="weapon-card" data-weapon="orbit"><b>血月环刃</b><em>在工坊锻造</em></button>
         </div>
         <div class="controls-card">
           <span><b>WASD</b> 移动</span>
           <span><b>鼠标 / 方向键</b> 射击</span>
-          <span><b>空格</b> 翻滚</span>
+          <span><b>空格</b> 短距闪避</span>
           <span><b>Q</b> 英雄技能</span>
           <span><b>I</b> 道具图鉴</span>
         </div>

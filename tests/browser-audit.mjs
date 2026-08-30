@@ -69,9 +69,33 @@ assert(guide.visible && guide.cards === 36 && guide.text.includes("自动生效"
 const pausedAt = await evaluate("window.__game.getState().runStats.damageTaken + ':' + window.__game.getState().player.x");
 await wait(300);
 assert(await evaluate("window.__game.getState().runStats.damageTaken + ':' + window.__game.getState().player.x") === pausedAt, "Game did not pause while codex was open");
-await screenshot("v4-item-codex");
+await screenshot("v5-item-codex");
 await call("Input.dispatchKeyEvent", { type: "keyDown", code: "Escape", key: "Escape" });
 await call("Input.dispatchKeyEvent", { type: "keyUp", code: "Escape", key: "Escape" });
+
+await evaluate("window.__game.addSeeds(2); window.__game.unlockBlueprint('seeker'); window.__game.addMaterials({ bone: 8, crystal: 8, sap: 8 }); window.__game.toggleWorkshop(true)");
+await wait(120);
+state = await evaluate("window.__game.getState()");
+assert(state.workshopOpen, "Workshop did not open");
+const workshop = await evaluate(`({ plots: document.querySelectorAll('.farm-plot').length, recipes: document.querySelectorAll('.forge-card').length, visible: document.querySelector('#workshop-panel').classList.contains('visible') })`);
+assert(workshop.visible && workshop.plots === 3 && workshop.recipes === 3, "Workshop content is incomplete");
+await screenshot("v5-workshop");
+await evaluate("window.__game.plantSeed(0); window.__game.matureCrops(); window.__game.harvestPlot(0); window.__game.craftWeapon('seeker'); window.__game.toggleWorkshop(false)");
+state = await evaluate("window.__game.getState()");
+assert(state.meta.craftedWeapons.includes("seeker") && Object.values(state.meta.materials).some(amount => amount > 0), "Farm and crafting loop failed");
+
+await evaluate("window.__game.start(); window.__game.equipWeapon('seeker')");
+await wait(650);
+await evaluate("window.__game.fire(0)");
+state = await evaluate("window.__game.getState()");
+assert(state.playerProjectiles.some(projectile => projectile.weapon === "seeker" && projectile.homing > 0 && projectile.targetId), "Seeker targeting failed");
+await evaluate("window.__game.equipWeapon('prism'); window.__game.fire(0)");
+state = await evaluate("window.__game.getState()");
+assert(state.playerProjectiles.some(projectile => projectile.weapon === "prism" && projectile.bounces > 0), "Prism ricochet failed");
+await evaluate("window.__game.equipWeapon('orbit'); window.__game.fire(0)");
+state = await evaluate("window.__game.getState()");
+assert(state.playerProjectiles.some(projectile => projectile.weapon === "orbit" && projectile.boomerang), "Orbit boomerang failed");
+await screenshot("v5-crafted-weapons");
 
 await evaluate("window.__game.goToRoom(3); window.__game.giveItem('goldCoin')");
 await wait(120);
@@ -84,26 +108,34 @@ await call("Input.dispatchMouseEvent", { type: "mousePressed", x: offer.x * scal
 await call("Input.dispatchMouseEvent", { type: "mouseReleased", x: offer.x * scale, y: offer.y * scale + offsetY, button: "left", buttons: 0, clickCount: 1 });
 await wait(120);
 assert((await evaluate("window.__game.getState().shopPurchases")) === 1, "Real shop click failed");
-await screenshot("v4-shop-details");
+await screenshot("v5-shop-details");
 
 const bossRooms = [4, 9, 14, 19, 24, 29, 34, 39, 44, 49, 54];
 const bossAudit = [];
 for (const room of bossRooms) {
-  await evaluate(`window.__game.start(); for (let i = 0; i < 30; i += 1) window.__game.giveItem('shield'); window.__game.goToRoom(${room}); window.__game.setBossHealthRatio(.3)`);
+  await evaluate(`window.__game.start(); for (let i = 0; i < 30; i += 1) window.__game.giveItem('shield'); window.__game.goToRoom(${room}); window.__game.setBossHealthRatio(${room === 4 ? ".6" : ".3"})`);
+  if (room === 4) {
+    await wait(1500);
+    state = await evaluate("window.__game.getState()");
+    assert(state.bossStage === 2 && state.bossThreat.damage > 1, "Boss stage two presentation failed");
+    await screenshot("v5-boss-4-stage2");
+    await evaluate("window.__game.setBossHealthRatio(.3)");
+  }
   await wait(2300);
   state = await evaluate("window.__game.getState()");
   const bossType = state.enemyTypes.find(type => type.startsWith("boss"));
   assert(state.bossStage === 3, `Boss room ${room} did not reach stage three`);
+  assert(state.bossThreat.damage >= 1.5 && state.bossThreat.projectileSize > 1.3, `Boss room ${room} stage stats did not escalate`);
   assert(state.bossMechanics[bossType] > 0, `Boss room ${room} behavior did not execute`);
   bossAudit.push({ room, bossType, hazards: state.hazards, bullets: state.enemyBullets, waves: state.bossWaves, lasers: state.bossLasers });
-  if ([4, 24, 29, 39, 49, 54].includes(room)) await screenshot(`v4-boss-${room}`);
+  if ([4, 24, 29, 39, 49, 54].includes(room)) await screenshot(`v5-boss-${room}`);
 }
 
 await evaluate("window.__game.start(); window.__game.goToRoom(44); window.__game.clearRoom()");
 await wait(150);
 state = await evaluate("window.__game.getState()");
 assert(state.routeChoice?.join(",") === "cathedral,sheol", "Final route choice did not appear");
-await screenshot("v4-ending-route");
+await screenshot("v5-ending-route");
 await evaluate("window.__game.chooseRoute('sheol'); window.__game.goToRoom(49)");
 state = await evaluate("window.__game.getState()");
 assert(state.finalBranch === "sheol" && state.biome === "燃罪魔窟", "Final route was not applied");
@@ -122,18 +154,22 @@ await call("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 
 await wait(70);
 const mobileFiring = await evaluate("window.__game.getState()");
 await call("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await wait(420);
+const mobileReleased = await evaluate("window.__game.getState()");
 await call("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: mobileControls.stick.x, y: mobileControls.stick.y, radiusX: 8, radiusY: 8 }] });
 await call("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: mobileControls.stick.x + 36, y: mobileControls.stick.y, radiusX: 8, radiusY: 8 }] });
 await wait(450);
 await call("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 const mobileAfter = await evaluate("window.__game.getState()");
 assert(mobileFiring.playerBullets > 0, "Mobile fire control failed");
+assert(!mobileReleased.input.firing && mobileReleased.input.firePointerId === null, "Mobile fire button remained stuck after touchend");
+assert(mobileReleased.player.shotSequence === mobileFiring.player.shotSequence, "Mobile fire continued after release");
 assert(mobileAfter.player.x > mobileBefore.player.x + 8, "Mobile joystick movement failed");
 await evaluate("window.__game.toggleGuide(true)");
 await wait(80);
 assert(await evaluate("document.querySelector('#guide-panel').classList.contains('visible')"), "Mobile item codex did not open");
-await screenshot("v4-mobile-codex");
+await screenshot("v5-mobile-codex");
 
 assert(browserErrors.length === 0, `Browser errors: ${browserErrors.join(" | ")}`);
-console.log(JSON.stringify({ itemCodex: guide.cards, shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFire: "passed", browserErrors: browserErrors.length }, null, 2));
+console.log(JSON.stringify({ itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", browserErrors: browserErrors.length }, null, 2));
 socket.close();

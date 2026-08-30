@@ -12,7 +12,8 @@ function element(id) {
       style: {}, innerHTML: "", textContent: "", handlers: {},
       classList: { add() {}, remove() {} },
       addEventListener(type, callback) { (this.handlers[type] ||= []).push(callback); },
-      setPointerCapture() {}, hasPointerCapture() { return true; }, focus() {}, setAttribute() {},
+      setPointerCapture() {}, releasePointerCapture() {}, hasPointerCapture() { return true; }, focus() {}, setAttribute() {},
+      closest() { return null; },
       getBoundingClientRect() { return { left: 30, top: 390, width: 118, height: 118 }; }
     });
   }
@@ -50,6 +51,7 @@ const windowMock = {
 
 vm.runInNewContext(fs.readFileSync("game.js", "utf8"), {
   window: windowMock, document: documentMock, console, Math, setTimeout, clearTimeout,
+  setInterval() { return 1; }, clearInterval() {},
   requestAnimationFrame(callback) { frames.push(callback); }
 }, { filename: "game.js" });
 
@@ -107,6 +109,41 @@ assert(game.getState().feedback.particles > 0, "Muzzle feedback failed");
 step(10);
 documentEvents.keyup[0]({ code: "ArrowRight", key: "ArrowRight" });
 assert(game.getState().playerBullets > 0, "Keyboard shooting failed");
+
+game.start();
+step(2);
+game.equipWeapon("seeker");
+game.fire(0);
+state = game.getState();
+assert(state.playerProjectiles.some(projectile => projectile.weapon === "seeker" && projectile.homing > 0 && projectile.targetId), "Seeker auto-lock projectile failed");
+game.equipWeapon("prism");
+game.fire(0);
+assert(game.getState().playerProjectiles.some(projectile => projectile.weapon === "prism" && projectile.bounces >= 2), "Prism ricochet projectile failed");
+game.equipWeapon("orbit");
+game.fire(0);
+assert(game.getState().playerProjectiles.some(projectile => projectile.weapon === "orbit" && projectile.boomerang), "Orbit boomerang projectile failed");
+
+const fireButton = element("fire-button");
+const touchFireEvent = { pointerId: 91, pointerType: "touch", preventDefault() {}, currentTarget: fireButton };
+fireButton.handlers.pointerdown[0](touchFireEvent);
+assert(game.getState().input.firing && game.getState().input.firePointerId === 91, "Touch fire press failed");
+windowEvents.pointerup[0]({ pointerId: 91, pointerType: "touch" });
+assert(!game.getState().input.firing && game.getState().input.firePointerId === null, "Touch fire release remained stuck");
+
+game.toggleWorkshop(true);
+assert(game.getState().workshopOpen, "Workshop did not open");
+const seedsBeforePlanting = game.getState().meta.seeds;
+game.addSeeds(1);
+assert(game.plantSeed(0), "Farm seed planting failed");
+game.matureCrops();
+assert(game.harvestPlot(0), "Farm harvest failed");
+state = game.getState();
+assert(state.meta.seeds === seedsBeforePlanting && Object.values(state.meta.materials).some(amount => amount > 0), "Farm material loop failed");
+game.unlockBlueprint("seeker");
+game.addMaterials({ bone: 10, crystal: 10, sap: 10 });
+assert(game.craftWeapon("seeker") && game.getState().meta.craftedWeapons.includes("seeker"), "Workshop weapon crafting failed");
+game.toggleWorkshop(false);
+game.selectWeapon("repeater");
 
 game.goToRoom(game.getState().roomKinds.indexOf("elite"));
 step(2);
@@ -223,10 +260,12 @@ for (const bossRoom of [4, 9, 14, 19, 24, 29, 34, 39, 44, 49, 54]) {
   game.setBossHealthRatio(.6);
   step(2);
   assert(game.getState().bossStage === 2, `Boss ${bossRoom} did not enter stage 2`);
+  assert(game.getState().bossThreat.damage > 1 && game.getState().bossThreat.projectileSpeed > 1, `Boss ${bossRoom} stage 2 stats did not change`);
   step(60);
   game.setBossHealthRatio(.3);
   step(2);
   assert(game.getState().bossStage === 3, `Boss ${bossRoom} did not enter stage 3`);
+  assert(game.getState().bossThreat.damage >= 1.5 && game.getState().bossThreat.cadence > 1.4, `Boss ${bossRoom} stage 3 threat did not escalate`);
   assert(Object.keys(game.getState().bossMechanics).length === 1, `Boss ${bossRoom} behavior handler did not run`);
   if (bossRoom === 39) {
     step(220);
@@ -293,10 +332,13 @@ console.log(JSON.stringify({
   shopPurchasing: "passed",
   keyboardMovement: "passed",
   keyboardShooting: "passed",
+  touchFireRelease: "passed",
   eliteAffixes: "passed",
   summonerRole: "passed",
   controlHazards: "passed",
-  weaponCores: 3,
+  weaponCores: 6,
+  craftedWeapons: 3,
+  farmLoop: "passed",
   statusEffects: 5,
   routeChoices: "passed",
   threeStageBosses: "passed",
