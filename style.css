@@ -20,6 +20,69 @@ body { touch-action: none; }
 
 #game-shell { position: relative; width: 100%; height: 100%; }
 
+#guide-button {
+  position: absolute;
+  z-index: 6;
+  top: 14px;
+  right: 16px;
+  padding: 9px 13px;
+  border: 2px solid #9b7950;
+  border-radius: 8px;
+  color: #f4dfb5;
+  background: linear-gradient(#3b2a27e8, #1b1519e8);
+  box-shadow: 0 5px 16px #0008, inset 0 1px #8b6757;
+  font: 800 12px system-ui;
+  letter-spacing: .04em;
+}
+
+#guide-button:hover { border-color: #e3bd70; transform: translateY(-1px); }
+
+.guide-panel {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 28px;
+  background: radial-gradient(circle at 50% 35%, #37252ed9, #08070aee 70%);
+  backdrop-filter: blur(5px);
+}
+
+.guide-panel.visible { display: grid; }
+
+.guide-book {
+  width: min(920px, calc(100vw - 42px));
+  max-height: min(780px, calc(100vh - 42px));
+  overflow: auto;
+  padding: 24px;
+  border: 3px solid #765443;
+  border-radius: 15px 12px 18px 11px;
+  color: #e9d9b8;
+  background: linear-gradient(145deg, #2b2023f7, #171318fa 62%, #24191df7);
+  box-shadow: 0 24px 80px #000d, inset 0 0 0 2px #241619, inset 0 0 45px #0008;
+  touch-action: pan-y;
+}
+
+.guide-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid #6e514766; padding-bottom: 15px; }
+.guide-header h2 { margin: 3px 0 0; color: #f2dfba; font-size: clamp(24px, 4vw, 38px); }
+#guide-close { padding: 9px 14px; border: 2px solid #735145; border-radius: 7px; color: #e7d2ae; background: #261b20; font-weight: 900; }
+.guide-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+.guide-summary article { min-height: 68px; padding: 12px; border: 1px solid #70534788; border-radius: 9px; background: #120f13aa; }
+.guide-summary b { display: block; margin-bottom: 5px; color: #f1c86e; font-size: 13px; }
+.guide-summary span { color: #bcae99; font-size: 12px; line-height: 1.55; }
+.guide-items { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.guide-item { --item-color: #b7a78e; position: relative; min-height: 92px; padding: 12px 12px 11px 54px; border: 1px solid #5e4a43; border-radius: 9px; background: linear-gradient(145deg, #2c2326, #181419); }
+.guide-item.owned { border-color: var(--item-color); box-shadow: inset 0 0 20px color-mix(in srgb, var(--item-color) 12%, transparent); }
+.guide-item.locked { opacity: .5; filter: grayscale(.6); }
+.guide-glyph { position: absolute; left: 12px; top: 14px; display: grid; place-items: center; width: 31px; height: 31px; border: 2px solid var(--item-color); border-radius: 50%; color: var(--item-color); background: #151116; font: 900 18px Georgia, serif; }
+.guide-item h3 { margin: 0 0 3px; color: #f0dfc0; font-size: 14px; }
+.guide-item h3 em { color: #efd06e; font-size: 11px; font-style: normal; }
+.guide-tag { color: var(--item-color); font-size: 10px; font-weight: 900; letter-spacing: .07em; }
+.guide-item p { margin: 5px 0 0; color: #b9aa97; font-size: 11px; line-height: 1.42; }
+.guide-item small { display: block; margin-top: 5px; color: #7fba91; font-weight: 800; }
+.guide-footnote { margin: 17px 0 0; color: #9c8e81; text-align: center; font-size: 12px; }
+.guide-footnote b { color: #f0cc79; }
+
 #game {
   display: block;
   width: 100%;
@@ -199,6 +262,11 @@ button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71382c; }
 #stick-knob { position: absolute; width: 50px; height: 50px; left: 32px; top: 32px; border-radius: 54% 46% 52% 48%; background: radial-gradient(circle at 35% 30%, #d9bd79aa, #806c4c99); border: 3px solid #e4cc91aa; box-shadow: 0 5px 12px #0007; }
 
 @media (pointer: coarse), (max-width: 760px) {
+  #guide-button { top: 8px; right: 8px; padding: 7px 9px; font-size: 10px; }
+  .guide-panel { padding: 10px; }
+  .guide-book { width: calc(100vw - 20px); max-height: calc(100vh - 20px); padding: 16px; }
+  .guide-summary, .guide-items { grid-template-columns: 1fr; }
+  .guide-header h2 { font-size: 24px; }
   #touch-ui.active { display: block; }
   .controls-card { max-width: 340px; }
   .controls-card span { font-size: 12px; }

@@ -11,12 +11,29 @@
   <main id="game-shell">
     <canvas id="game" tabindex="0" aria-label="弹壳地牢游戏画面"></canvas>
 
+    <button id="guide-button" type="button" aria-label="打开遗物图鉴">I · 道具图鉴</button>
+
+    <section id="guide-panel" class="guide-panel" aria-hidden="true">
+      <div class="guide-book">
+        <header class="guide-header">
+          <div>
+            <div class="eyebrow">RELIC CODEX</div>
+            <h2>遗物与构筑说明</h2>
+          </div>
+          <button id="guide-close" type="button" aria-label="关闭遗物图鉴">关闭 ×</button>
+        </header>
+        <div id="guide-summary" class="guide-summary"></div>
+        <div id="guide-items" class="guide-items"></div>
+        <p class="guide-footnote">按 <b>I</b> 或 <b>Esc</b> 返回战斗；打开图鉴时游戏自动暂停。</p>
+      </div>
+    </section>
+
     <section id="start-screen" class="screen visible">
       <div class="screen-panel">
         <div class="sigil" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="eyebrow">A HAND-DRAWN DUNGEON</div>
         <h1>弹壳地牢</h1>
-        <p class="subtitle">选择英雄与流派，穿越 3 章 18 个房间，击败三位地牢领主。</p>
+        <p class="subtitle">选择英雄与流派，沿真实章节结构下坠 11 层，挑战十一位地牢领主。</p>
         <div class="hero-select" aria-label="选择英雄">
           <button class="hero-card selected" data-hero="breaker"><b>爆破者</b><small>摧毁流</small><em>爆裂震波</em></button>
           <button class="hero-card" data-hero="gambler"><b>铸币客</b><small>硬币流</small><em>弹壳风暴</em></button>
@@ -34,6 +51,7 @@
           <span><b>鼠标 / 方向键</b> 射击</span>
           <span><b>空格</b> 翻滚</span>
           <span><b>Q</b> 英雄技能</span>
+          <span><b>I</b> 道具图鉴</span>
         </div>
         <button id="start-button">推开地窖之门</button>
         <p id="meta-progress" class="meta-progress">远征 0 · 通关 0 · Boss 印记 0 · 最佳击杀 0</p>

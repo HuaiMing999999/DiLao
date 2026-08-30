@@ -12,7 +12,7 @@ function element(id) {
       style: {}, innerHTML: "", textContent: "", handlers: {},
       classList: { add() {}, remove() {} },
       addEventListener(type, callback) { (this.handlers[type] ||= []).push(callback); },
-      setPointerCapture() {}, hasPointerCapture() { return true; }, focus() {},
+      setPointerCapture() {}, hasPointerCapture() { return true; }, focus() {}, setAttribute() {},
       getBoundingClientRect() { return { left: 30, top: 390, width: 118, height: 118 }; }
     });
   }
@@ -72,14 +72,18 @@ step(2);
 
 let state = game.getState();
 assert(state.hero === "seer", "Hero selection failed");
-assert(state.roomCount === 18, `Expected 18 levels, got ${state.roomCount}`);
-assert(state.roomKinds.filter(kind => kind === "boss").length === 3, "Expected 3 boss rooms");
-assert(state.roomKinds.filter(kind => kind === "treasure").length === 3, "Expected 3 treasure rooms");
-assert(state.roomKinds.filter(kind => kind === "shop").length === 3, "Expected 3 shop rooms");
-for (const type of ["grunt", "charger", "turret", "bat", "splitter", "leech", "cultist", "bomber", "bossBrood", "bossWarden", "bossHeart"]) {
+assert(state.roomCount === 55, `Expected 55 rooms, got ${state.roomCount}`);
+assert(state.roomKinds.filter(kind => kind === "boss").length === 11, "Expected 11 boss rooms");
+assert(state.roomKinds.filter(kind => kind === "treasure").length === 11, "Expected 11 treasure rooms");
+assert(state.roomKinds.filter(kind => kind === "shop").length === 11, "Expected 11 shop rooms");
+for (const type of ["grunt", "charger", "turret", "bat", "splitter", "leech", "cultist", "bomber", "bossCoil", "bossHopper", "bossDevourer", "bossIdol", "bossPeep", "bossMatron", "bossHollow", "bossHeart", "bossBloat", "bossBurrow", "bossInfernal"]) {
   assert(state.plannedEnemyTypes.includes(type), `Missing enemy type: ${type}`);
 }
 assert(state.obstacles > 0, "Interactive room obstacles were not generated");
+game.toggleGuide(true);
+assert(game.getState().guideOpen, "Item codex did not open");
+game.toggleGuide(false);
+assert(!game.getState().guideOpen, "Item codex did not close");
 game.useSkill();
 step(5);
 assert(game.getState().skillCooldown > 0, "Hero active skill failed");
@@ -110,12 +114,12 @@ state = game.getState();
 assert(Object.keys(state.eliteAffixes).length >= 2, "Elite affix variety failed");
 assert(state.enemies.some(enemy => enemy.affix === "warded" && enemy.shield > 0), "Warded elite failed");
 
-game.goToRoom(6);
+game.goToRoom(10);
 for (let index = 0; index < 5; index += 1) game.giveItem("shield");
 step(100);
 assert(game.getState().summonedEnemies > 0, "Cultist summoning role failed");
 
-game.goToRoom(12);
+game.goToRoom(20);
 step(175);
 assert(game.getState().hazards > 0, "Bomber control hazard failed");
 
@@ -169,12 +173,12 @@ assert(game.getState().enemies[0].statuses.freeze > 0, "Status application faile
 
 game.start();
 step();
-game.goToRoom(2);
+game.goToRoom(1);
 game.collectPickups();
 step(2);
 assert(game.getState().routeChoice.join(",") === "safe,risk", "Route choice did not open after treasure");
 game.chooseRoute("safe");
-assert(game.getState().roomKinds[3] === "sanctuary" && game.getState().doorOpen, "Safe route failed");
+assert(game.getState().roomKinds[2] === "sanctuary" && game.getState().doorOpen, "Safe route failed");
 game.exitRoom();
 step(6);
 state = game.getState();
@@ -199,18 +203,18 @@ assert(state.coins === shopCoins - shopOffer.price, "Shop purchase did not deduc
 
 game.start();
 step();
-game.goToRoom(2);
+game.goToRoom(1);
 game.collectPickups();
 step(2);
 game.chooseRoute("risk");
 state = game.getState();
-assert(state.roomKinds[3] === "elite" && state.roomModifier === null && state.routeChoices === 1, "Risk route selection failed");
+assert(state.roomKinds[2] === "elite" && state.roomModifier === null && state.routeChoices === 1, "Risk route selection failed");
 game.exitRoom();
 step(6);
 state = game.getState();
 assert(state.roomType === "elite" && state.roomModifier === "cursed", "Risk route encounter failed");
 
-for (const bossRoom of [5, 11, 17]) {
+for (const bossRoom of [4, 9, 14, 19, 24, 29, 34, 39, 44, 49, 54]) {
   game.start();
   step();
   for (let index = 0; index < 20; index += 1) game.giveItem("shield");
@@ -223,11 +227,8 @@ for (const bossRoom of [5, 11, 17]) {
   game.setBossHealthRatio(.3);
   step(2);
   assert(game.getState().bossStage === 3, `Boss ${bossRoom} did not enter stage 3`);
-  if (bossRoom === 11) {
-    step(80);
-    assert(game.getState().arenaInset > 0, "Warden arena contraction failed");
-  }
-  if (bossRoom === 17) {
+  assert(Object.keys(game.getState().bossMechanics).length === 1, `Boss ${bossRoom} behavior handler did not run`);
+  if (bossRoom === 39) {
     step(220);
     assert(game.getState().bossWaves > 0, "Heart shockwave phase failed");
   }
@@ -235,8 +236,20 @@ for (const bossRoom of [5, 11, 17]) {
 
 game.start();
 step();
+game.goToRoom(44);
+game.clearRoom();
+step(3);
+state = game.getState();
+assert(state.routeChoice.join(",") === "cathedral,sheol", "Final descent branch did not open");
+game.chooseRoute("sheol");
+assert(game.getState().finalBranch === "sheol", "Sheol branch selection failed");
+game.goToRoom(49);
+assert(game.getState().biome === "燃罪魔窟", "Chapter 5 branch biome was not applied");
+
+game.start();
+step();
 let guard = 0;
-while (game.getState().state === "playing" && guard++ < 40) {
+while (game.getState().state === "playing" && guard++ < 90) {
   game.clearRoom();
   step(3);
   assert(game.getState().enemyBullets === 0, "Enemy bullets survived room clear");
@@ -249,7 +262,7 @@ while (game.getState().state === "playing" && guard++ < 40) {
 }
 state = game.getState();
 assert(state.outcome === "victory", "Campaign did not reach victory");
-assert(state.bossKills === 3, `Expected 3 boss kills, got ${state.bossKills}`);
+assert(state.bossKills === 11, `Expected 11 boss kills, got ${state.bossKills}`);
 assert(state.itemsFound >= 5, `Expected at least 5 guaranteed item rewards, got ${state.itemsFound}`);
 assert(state.meta.bossDefeats >= 3 && state.meta.wins >= 1, "Meta progression was not recorded");
 
@@ -266,9 +279,9 @@ assert(game.getState().outcome === "defeat", "Death flow failed");
 assert(game.getState().runStats.damageTaken >= 99, "Run damage statistics failed");
 
 console.log(JSON.stringify({
-  levels: 18,
-  chapters: 3,
-  bosses: 3,
+  rooms: 55,
+  depths: 11,
+  bosses: 11,
   enemyTypes: 8,
   items: 36,
   heroes: 4,

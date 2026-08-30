@@ -6,19 +6,33 @@
   const startScreen = document.querySelector("#start-screen");
   const endScreen = document.querySelector("#end-screen");
   const touchUi = document.querySelector("#touch-ui");
+  const guidePanel = document.querySelector("#guide-panel");
+  const guideSummary = document.querySelector("#guide-summary");
+  const guideItems = document.querySelector("#guide-items");
   const ROOM_WIDTH = 960;
   const ROOM_HEIGHT = 540;
   const WALL = 44;
   const TAU = Math.PI * 2;
   const roomNames = [
     ["灰烬门厅", "铜锁走廊", "潮湿地窖", "蛾尘寝室"],
+    ["溺骨回廊", "菌灯洞室", "坍塌岩穴", "滴水祭坑"],
     ["失火书库", "碎骨工坊", "焦黑祭坛", "熔蜡回廊"],
-    ["血肉深井", "旧王餐厅", "脉动甬道", "低语心室"]
+    ["血肉深井", "旧王餐厅", "脉动甬道", "低语心室"],
+    ["苍蓝回声", "无声礼拜堂", "星屑侧殿", "镜光长廊"],
+    ["焦骨刑场", "硫火回廊", "失名王座", "无光深室"]
   ];
   const chapters = [
-    { name: "腐朽地窖", theme: 0, boss: "bossBrood", bossName: "腐巢母体" },
-    { name: "焚毁墓穴", theme: 2, boss: "bossWarden", bossName: "黄铜狱卒" },
-    { name: "血肉深井", theme: 3, boss: "bossHeart", bossName: "深渊之心" }
+    { act: 1, floor: "I", variants: [{ name: "腐朽地窖", theme: 0 }, { name: "孢子地窖", theme: 0 }, { name: "焚痕地窖", theme: 2 }], boss: "bossCoil", bossName: "腐环幼体" },
+    { act: 1, floor: "II", variants: [{ name: "腐朽地窖", theme: 0 }, { name: "孢子地窖", theme: 0 }, { name: "焚痕地窖", theme: 2 }], boss: "bossHopper", bossName: "哀鸣巨像" },
+    { act: 2, floor: "I", variants: [{ name: "溺骨岩窟", theme: 1 }, { name: "葬骨墓窟", theme: 1 }, { name: "淹没洞穴", theme: 4 }], boss: "bossDevourer", bossName: "饥渊蠕王" },
+    { act: 2, floor: "II", variants: [{ name: "溺骨岩窟", theme: 1 }, { name: "葬骨墓窟", theme: 1 }, { name: "淹没洞穴", theme: 4 }], boss: "bossIdol", bossName: "脓根圣像" },
+    { act: 3, floor: "I", variants: [{ name: "刑狱深层", theme: 2 }, { name: "王骸墓城", theme: 2 }, { name: "霉暗深层", theme: 0 }], boss: "bossPeep", bossName: "泪池窥者" },
+    { act: 3, floor: "II", variants: [{ name: "刑狱深层", theme: 2 }, { name: "王骸墓城", theme: 2 }, { name: "霉暗深层", theme: 0 }], boss: "bossMatron", bossName: "门中母影" },
+    { act: 4, floor: "I", variants: [{ name: "血肉宫腔", theme: 3 }, { name: "内脏子宫", theme: 3 }, { name: "瘢痕母巢", theme: 3 }], boss: "bossHollow", bossName: "空骨长虫" },
+    { act: 4, floor: "II", variants: [{ name: "血肉宫腔", theme: 3 }, { name: "内脏子宫", theme: 3 }, { name: "瘢痕母巢", theme: 3 }], boss: "bossHeart", bossName: "深渊之心" },
+    { act: 4.5, floor: "裂隙", variants: [{ name: "苍蓝胎海", theme: 4 }], boss: "bossBloat", bossName: "裂眼浮尸" },
+    { act: 5, floor: "终路", variants: [{ name: "哀歌圣堂", theme: 4 }], boss: "bossBurrow", bossName: "圣髓潜兽", branchDepth: 1 },
+    { act: 6, floor: "终局", variants: [{ name: "鎏金遗箱", theme: 4 }], boss: "bossInfernal", bossName: "鎏金审判", branchDepth: 2 }
   ];
   const roomModifiers = {
     swarm: { name: "虫潮", color: "#9caf69" },
@@ -34,11 +48,20 @@
   };
   const weaponNames = { repeater: "泪火连弩", scatter: "霰火心脏", wisp: "游魂提灯", cleaver: "锯齿祭刃" };
   const weaponDescriptions = { repeater: "稳定连射", scatter: "近距爆发", wisp: "双灵体齐射", cleaver: "近战格挡弹幕" };
-  const bossStageNames = {
-    bossBrood: ["猎食", "孵化", "腐地"],
-    bossWarden: ["裁决", "封锁", "熔牢"],
-    bossHeart: ["凝视", "心跳", "狂搏"]
+  const bossProfiles = {
+    bossCoil: { hp: 24, radius: 42, speed: 92, stages: ["蛇行", "遗蜕", "断节"] },
+    bossHopper: { hp: 30, radius: 43, speed: 82, stages: ["喷涌", "腾跃", "天坠"] },
+    bossDevourer: { hp: 36, radius: 47, speed: 74, stages: ["巡游", "吞噬", "暴食"] },
+    bossIdol: { hp: 42, radius: 48, speed: 0, stages: ["凝视", "育巢", "喷发"] },
+    bossPeep: { hp: 46, radius: 42, speed: 84, stages: ["泪池", "脱眼", "双瞳"] },
+    bossMatron: { hp: 55, radius: 52, speed: 0, stages: ["叩门", "覆掌", "践踏"] },
+    bossHollow: { hp: 54, radius: 40, speed: 120, stages: ["游空", "裂节", "疾返"] },
+    bossHeart: { hp: 64, radius: 50, speed: 70, stages: ["凝视", "心跳", "狂搏"] },
+    bossBloat: { hp: 70, radius: 45, speed: 78, stages: ["腐池", "裂眼", "血光"] },
+    bossBurrow: { hp: 78, radius: 46, speed: 105, stages: ["潜行", "露尾", "掘袭"] },
+    bossInfernal: { hp: 92, radius: 52, speed: 82, stages: ["献祭", "魔像", "双蹄"] }
   };
+  const bossStageNames = Object.fromEntries(Object.entries(bossProfiles).map(([id, profile]) => [id, profile.stages]));
   const heroes = {
     breaker: { name: "爆破者", path: "摧毁流", tag: "destroy", skill: "爆裂震波", color: "#c75c45", apply: player => { player.damage = 1.25; player.fireRate = .24; player.skillDelay = 8; } },
     gambler: { name: "铸币客", path: "硬币流", tag: "coin", skill: "弹壳风暴", color: "#d4a44e", apply: player => { player.coins = 6; player.damage = .9; player.fireRate = .2; player.skillDelay = 6; } },
@@ -96,6 +119,7 @@
   let enemySerial = 0;
   let selectedHero = "breaker";
   let selectedWeapon = "repeater";
+  let guideOpen = false;
   let audioContext;
   const keys = new Set();
   const pointer = { x: ROOM_WIDTH / 2, y: ROOM_HEIGHT / 2, down: false, moveDown: false, active: false };
@@ -134,6 +158,49 @@
 
   function availableItems() {
     return items.filter(item => !item.unlockAt || metaProgress.bossDefeats >= item.unlockAt);
+  }
+
+  function itemKind(item) {
+    if (item.core) return "武器核心 · 拾取后自动切换/升级";
+    if (item.cursed) return "代价遗物 · 拾取后自动生效";
+    return "被动遗物 · 拾取后自动生效";
+  }
+
+  function renderGuide() {
+    const tagNames = { destroy: "摧毁流", coin: "硬币流", spell: "咒文流", titan: "泰坦流" };
+    const tagColors = { destroy: "#d66c4f", coin: "#e0b555", spell: "#a88bd9", titan: "#82ad8b" };
+    const ownedCount = game ? Object.keys(game.itemStacks).filter(id => game.itemStacks[id] > 0).length : 0;
+    const hero = game ? heroes[game.player.hero] : heroes[selectedHero];
+    guideSummary.innerHTML = [
+      ["道具如何使用", "所有遗物触碰或购买后立即自动生效，无需再按键；效果会持续到本局结束。"],
+      ["唯一主动操作", `按 Q 释放${hero.name}的“${hero.skill}”；武器核心会自动切换攻击方式。`],
+      ["当前构筑", game ? `${hero.path} · 已持有 ${ownedCount} 种遗物 · 点击关闭或按 I 继续` : "尚未开始本局；可先浏览完整道具池。"]
+    ].map(entry => `<article><b>${entry[0]}</b><span>${entry[1]}</span></article>`).join("");
+    guideItems.innerHTML = items.map(item => {
+      const count = game ? game.itemStacks[item.id] || 0 : 0;
+      const locked = item.unlockAt && metaProgress.bossDefeats < item.unlockAt;
+      const status = locked ? `击败 ${item.unlockAt} 个 Boss 后进入掉落池` : count ? `本局已生效 · ${count} 层` : "本局尚未获得";
+      return `<article class="guide-item${count ? " owned" : ""}${locked ? " locked" : ""}" style="--item-color:${tagColors[item.tag]}">
+        <span class="guide-glyph">${item.icon}</span>
+        <span class="guide-tag">${tagNames[item.tag]} · ${itemKind(item)}</span>
+        <h3>${item.name}${count ? ` <em>×${count}</em>` : ""}</h3>
+        <p>${item.detail}</p><small>${status}</small>
+      </article>`;
+    }).join("");
+  }
+
+  function setGuideOpen(open) {
+    guideOpen = Boolean(open);
+    if (guideOpen) {
+      resetInput();
+      renderGuide();
+      guidePanel.classList.add("visible");
+      guidePanel.setAttribute("aria-hidden", "false");
+    } else {
+      guidePanel.classList.remove("visible");
+      guidePanel.setAttribute("aria-hidden", "true");
+      if (game && game.state === "playing") requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
+    }
   }
 
   function equipWeapon(player, weapon) {
@@ -308,18 +375,20 @@
   function generateDungeon() {
     const dungeon = [];
     chapters.forEach((chapter, chapterIndex) => {
-      for (let roomIndex = 0; roomIndex < 6; roomIndex += 1) {
+      const variant = randomChoice(chapter.variants);
+      for (let roomIndex = 0; roomIndex < 5; roomIndex += 1) {
         const level = dungeon.length + 1;
-        if (roomIndex === 5) {
-          dungeon.push({ name: chapter.bossName, chapter: chapterIndex, floorRoom: 6, level, kind: "boss", enemies: [chapter.boss], theme: chapter.theme, cleared: false });
-          continue;
-        }
-        if (roomIndex === 2) {
-          dungeon.push({ name: `${chapter.name}宝库`, chapter: chapterIndex, floorRoom: roomIndex + 1, level, kind: "treasure", enemies: [], theme: chapter.theme, cleared: false, choices: randomItems(3, heroes[selectedHero].tag) });
-          continue;
-        }
+        const shared = { chapter: chapter.act - 1, depth: chapterIndex + 1, floorLabel: chapter.floor, biome: variant.name, floorRoom: roomIndex + 1, level, theme: variant.theme, branchDepth: chapter.branchDepth || 0, cleared: false };
         if (roomIndex === 4) {
-          dungeon.push({ name: "盲眼商贩", chapter: chapterIndex, floorRoom: roomIndex + 1, level, kind: "shop", enemies: [], theme: chapter.theme, cleared: false, choices: randomItems(3, heroes[selectedHero].tag) });
+          dungeon.push({ ...shared, name: chapter.bossName, bossName: chapter.bossName, kind: "boss", enemies: [chapter.boss] });
+          continue;
+        }
+        if (roomIndex === 1) {
+          dungeon.push({ ...shared, name: `${variant.name}宝库`, kind: "treasure", enemies: [], choices: randomItems(3, heroes[selectedHero].tag) });
+          continue;
+        }
+        if (roomIndex === 3) {
+          dungeon.push({ ...shared, name: "盲眼商贩", kind: "shop", enemies: [], choices: randomItems(3, heroes[selectedHero].tag) });
           continue;
         }
         const pools = [
@@ -327,19 +396,20 @@
           ["grunt", "charger", "turret", "bat", "cultist"],
           ["charger", "turret", "bat", "splitter", "cultist", "bomber"]
         ];
+        const pool = pools[Math.min(2, Math.floor(chapterIndex / 3))];
         const modifier = chapterIndex === 0 && roomIndex === 0 ? null : randomChoice(Object.keys(roomModifiers));
-        const enemyCount = Math.min(3 + chapterIndex + roomIndex + Math.floor(random(0, 2)) + (modifier === "swarm" ? 2 : 0), 10);
-        const enemyTypes = Array.from({ length: enemyCount }, () => randomChoice(pools[chapterIndex]));
+        const enemyCount = Math.min(3 + Math.floor(chapterIndex / 2) + roomIndex + Math.floor(random(0, 2)) + (modifier === "swarm" ? 2 : 0), 10);
+        const enemyTypes = Array.from({ length: enemyCount }, () => randomChoice(pool));
         if (chapterIndex === 0 && roomIndex === 0) enemyTypes.splice(0, 2, "grunt", "charger");
         if (chapterIndex === 0 && roomIndex === 1) enemyTypes.splice(0, 2, "leech", "turret");
-        if (chapterIndex === 1 && roomIndex === 0) enemyTypes.splice(0, 2, "bat", "cultist");
-        if (chapterIndex === 2 && roomIndex === 0) enemyTypes.splice(0, 2, "splitter", "bomber");
-        if (roomIndex === 3) enemyTypes.push(chapterIndex === 0 ? "cultist" : chapterIndex === 1 ? "bomber" : "splitter");
+        if (chapterIndex === 2 && roomIndex === 0) enemyTypes.splice(0, 2, "bat", "cultist");
+        if (chapterIndex === 4 && roomIndex === 0) enemyTypes.splice(0, 2, "splitter", "bomber");
+        if (roomIndex === 2) enemyTypes.push(chapterIndex < 3 ? "cultist" : chapterIndex < 7 ? "bomber" : "splitter");
         dungeon.push({
-          name: chapterIndex === 0 && roomIndex === 0 ? "入口前厅" : randomChoice(roomNames[chapterIndex]),
-          chapter: chapterIndex, floorRoom: roomIndex + 1, level,
-          kind: roomIndex === 3 ? "elite" : "combat",
-          enemies: enemyTypes, theme: chapter.theme, modifier, cleared: false
+          ...shared,
+          name: chapterIndex === 0 && roomIndex === 0 ? "入口前厅" : randomChoice(roomNames[variant.theme]),
+          kind: roomIndex === 2 ? "elite" : "combat",
+          enemies: enemyTypes, modifier
         });
       }
     });
@@ -359,6 +429,7 @@
   }
 
   function newGame() {
+    setGuideOpen(false);
     keys.clear();
     pointer.down = false;
     pointer.moveDown = false;
@@ -384,6 +455,8 @@
       affixesSeen: {},
       routeChoices: 0,
       routeChoice: null,
+      finalBranch: null,
+      bossMechanics: {},
       roomHit: false,
       synergies: {},
       itemStacks: {},
@@ -398,6 +471,7 @@
       hazards: [],
       slashes: [],
       bossWaves: [],
+      bossLasers: [],
       arenaInset: 0,
       texts: [],
       doorOpen: false,
@@ -422,6 +496,7 @@
     startScreen.classList.remove("visible");
     endScreen.classList.remove("visible");
     touchUi.classList.add("active");
+    game.texts.push({ text: "遗物会自动生效 · 按 I 查看完整说明", x: ROOM_WIDTH / 2, y: 122, life: 4, color: "#f1d28c", size: 15 });
     requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
   }
 
@@ -453,6 +528,7 @@
     game.hazards.length = 0;
     game.slashes.length = 0;
     game.bossWaves.length = 0;
+    game.bossLasers.length = 0;
     game.arenaInset = 0;
     game.texts.length = 0;
     game.roomHit = false;
@@ -508,6 +584,7 @@
 
   function spawnEnemy(type) {
     const boss = type.startsWith("boss");
+    const bossProfile = bossProfiles[type];
     const turret = type === "turret";
     const charger = type === "charger";
     const bat = type === "bat";
@@ -516,8 +593,8 @@
     const cultist = type === "cultist";
     const bomber = type === "bomber";
     const room = game.rooms[game.room];
-    const levelScale = (1 + game.room * .07) * (room.modifier === "swarm" ? .86 : 1) * (room.riskReward ? 1.3 : 1);
-    const bossHp = type === "bossBrood" ? 34 : type === "bossWarden" ? 52 : 72;
+    const levelScale = (1 + (room.depth - 1) * .13) * (room.modifier === "swarm" ? .86 : 1) * (room.riskReward ? 1.3 : 1);
+    const bossHp = bossProfile ? bossProfile.hp : 34;
     const baseHp = boss ? bossHp : turret ? 9 : splitter ? 8 : cultist ? 7 : bomber ? 10 : charger ? 6 : leech ? 4 : bat ? 3 : 4;
     let x;
     let y;
@@ -530,10 +607,10 @@
     const affix = elite ? affixKeys[(game.room + enemySerial + 1) % affixKeys.length] : null;
     if (affix) game.affixesSeen[affix] = (game.affixesSeen[affix] || 0) + 1;
     const enemy = {
-      id: ++enemySerial, type, x, y, radius: boss ? (type === "bossHeart" ? 50 : type === "bossWarden" ? 47 : 49) : bomber ? 22 : turret ? 20 : splitter ? 19 : cultist ? 18 : charger ? 18 : leech ? 12 : bat ? 13 : 16,
+      id: ++enemySerial, type, x, y, radius: boss ? bossProfile.radius : bomber ? 22 : turret ? 20 : splitter ? 19 : cultist ? 18 : charger ? 18 : leech ? 12 : bat ? 13 : 16,
       hp: Math.ceil(baseHp * levelScale * (elite ? 1.55 : 1)),
       maxHp: Math.ceil(baseHp * levelScale * (elite ? 1.55 : 1)),
-      speed: (boss ? 70 : bomber ? 48 : turret ? 30 : splitter ? 56 : cultist ? 68 : charger ? 80 : leech ? 150 : bat ? 138 : random(64, 92)) * (room.modifier === "frenzy" ? 1.24 : 1) * (affix === "frenzied" ? 1.22 : 1),
+      speed: (boss ? bossProfile.speed : bomber ? 48 : turret ? 30 : splitter ? 56 : cultist ? 68 : charger ? 80 : leech ? 150 : bat ? 138 : random(64, 92)) * (room.modifier === "frenzy" ? 1.24 : 1) * (affix === "frenzied" ? 1.22 : 1),
       cooldown: random(.3, 1.2), angle: 0, flash: 0, recoil: 0, attackFlash: 0, squash: 0,
       phase: random(0, TAU), charge: 0, windup: 0, chargeAngle: 0, spawnCooldown: 2.8,
       elite, affix, shield: affix === "warded" ? Math.ceil(4 * levelScale) : 0,
@@ -541,8 +618,14 @@
       summons: 0, guardTextCooldown: 0,
       statuses: { burn: 0, freeze: 0, poison: 0, bleed: 0, shock: 0 },
       statusTicks: { burn: 0, poison: 0, bleed: 0 }, bossStage: boss ? 1 : 0,
-      stageTransition: 0, waveCooldown: 2.4, hazardCooldown: 2.8, dead: false
+      stageTransition: 0, waveCooldown: 2.4, hazardCooldown: 2.8, actionTimer: 0,
+      moveX: Math.random() < .5 ? -1 : 1, moveY: 0, attackMode: null, telegraph: 0,
+      targetX: 0, targetY: 0, submerged: false, invulnerable: false, orbsSpawned: 0, dead: false
     };
+    if (boss && ["bossIdol", "bossMatron", "bossHeart", "bossInfernal"].includes(type)) {
+      enemy.x = ROOM_WIDTH / 2 + 70;
+      enemy.y = type === "bossInfernal" ? 125 : ROOM_HEIGHT / 2;
+    }
     game.enemies.push(enemy);
   }
 
@@ -789,7 +872,7 @@
       game.bossKills += 1;
       recordBossDefeat();
     }
-    if (enemy.type === "bossWarden") game.arenaInset = 0;
+    if (isBoss(enemy)) game.arenaInset = 0;
     screenShake = isBoss(enemy) ? 18 : 5;
     burst(enemy.x, enemy.y, isBoss(enemy) ? "#f7bd53" : "#c84c4c", isBoss(enemy) ? 40 : 15, isBoss(enemy) ? 260 : 150);
     sound(isBoss(enemy) ? 72 : 130, isBoss(enemy) ? .42 : .08, "square", isBoss(enemy) ? .04 : .012);
@@ -869,7 +952,7 @@
     if (Math.hypot(moveX, moveY) > 1) { moveX /= moveLength; moveY /= moveLength; }
     const moving = Math.min(1, Math.hypot(moveX, moveY));
     const rageMultiplier = player.rage > 0 ? 1.22 : 1;
-    const hazardSlow = game.hazards.some(hazard => distance(player, hazard) < hazard.radius + player.radius) ? .58 : 1;
+    const hazardSlow = game.hazards.some(hazard => hazard.kind !== "游荡眼球" && distance(player, hazard) < hazard.radius + player.radius) ? .58 : 1;
     player.slowed = hazardSlow < 1;
     const rolling = player.roll > 0;
     const targetSpeed = player.speed * rageMultiplier * (rolling ? 2.8 : moving * hazardSlow);
@@ -927,6 +1010,7 @@
     updateBombs(dt);
     updateHazards(dt);
     updateBossWaves(dt);
+    updateBossLasers(dt);
     updateParticles(dt);
     updatePickups(dt);
     game.comboTimer -= dt;
@@ -953,7 +1037,8 @@
         if (currentRoom.riskReward) game.pickups.push({ x: ROOM_WIDTH / 2 + 64, y: ROOM_HEIGHT / 2, type: "item", item: randomChoice(availableItems()), phase: 1 });
       }
       if (currentRoom.riskReward) player.coins += 4;
-      game.texts.push({ text: game.room === game.rooms.length - 1 ? "地牢核心已净化" : "房间已清空 · 出口开启", x: ROOM_WIDTH / 2, y: 94, life: 2 });
+      if (currentRoom.kind === "boss" && currentRoom.depth === 9 && !currentRoom.routeSelected) openDescentChoice();
+      game.texts.push({ text: game.room === game.rooms.length - 1 ? "地牢核心已净化" : game.routeChoice?.kind === "descent" ? "终路分岔 · 选择下坠方向" : "房间已清空 · 出口开启", x: ROOM_WIDTH / 2, y: 94, life: 2 });
     }
     if (game.doorOpen && player.x > ROOM_WIDTH - WALL - player.radius - 3) {
       if (game.room === game.rooms.length - 1) finish(true);
@@ -1110,6 +1195,13 @@
 
   function damageEnemy(enemy, amount, source) {
     if (!enemy || enemy.dead) return;
+    if (enemy.invulnerable && !(source && source.forceDamage)) {
+      if ((enemy.guardTextCooldown || 0) <= 0) {
+        enemy.guardTextCooldown = .6;
+        game.texts.push({ text: enemy.type === "bossBurrow" ? "甲壳无效 · 等待尾部弱点" : "暂时无法伤害", x: enemy.x, y: enemy.y - enemy.radius - 12, life: .65, color: "#9dd7df", size: 12, velocityY: -18 });
+      }
+      return;
+    }
     if (enemy.stageTransition > 0 && !(source && source.statusTick)) {
       const deflectAngle = source && Number.isFinite(source.vx) ? Math.atan2(source.vy, source.vx) + Math.PI : 0;
       directionalBurst(enemy.x, enemy.y, deflectAngle, "#d9c4a0", 5, 110);
@@ -1183,7 +1275,7 @@
     for (const obstacle of game.obstacles) {
       if (obstacle.dead) continue;
       if (obstacle.type === "spike") {
-        if (distance(entity, obstacle) < entity.radius + obstacle.radius * .65) damagePlayer(1, obstacle);
+        if (entity === game.player && distance(entity, obstacle) < entity.radius + obstacle.radius * .65) damagePlayer(1, obstacle);
         continue;
       }
       const deltaX = entity.x - obstacle.x;
@@ -1217,9 +1309,20 @@
       hazard.life -= dt;
       hazard.phase += dt * 3.2;
       hazard.tick -= dt;
+      if (hazard.kind === "游荡眼球") {
+        const ownerAlive = game.enemies.some(enemy => !enemy.dead && enemy.id === hazard.ownerId);
+        if (!ownerAlive) { hazard.life = 0; continue; }
+        hazard.x += hazard.vx * dt;
+        hazard.y += hazard.vy * dt;
+        const edge = WALL + hazard.radius;
+        if (hazard.x <= edge || hazard.x >= ROOM_WIDTH - edge) hazard.vx *= -1;
+        if (hazard.y <= edge || hazard.y >= ROOM_HEIGHT - edge) hazard.vy *= -1;
+        hazard.x = clamp(hazard.x, edge, ROOM_WIDTH - edge);
+        hazard.y = clamp(hazard.y, edge, ROOM_HEIGHT - edge);
+      }
       if (hazard.tick <= 0 && distance(hazard, game.player) < hazard.radius + game.player.radius) {
-        hazard.tick = .7;
-        damagePlayer(.5, hazard);
+        hazard.tick = hazard.kind === "游荡眼球" ? .9 : .7;
+        damagePlayer(hazard.kind === "游荡眼球" ? 1 : .5, hazard);
       }
     }
     game.hazards = game.hazards.filter(hazard => hazard.life > 0);
@@ -1350,12 +1453,8 @@
           enemy.cooldown = enemy.elite ? 1.55 : 2.25;
           game.texts.push({ text: "爆破标记", x: player.x, y: player.y - 28, life: .75 });
         }
-      } else if (enemy.type === "bossBrood") {
-        updateBrood(enemy, angle, playerDistance, dt);
-      } else if (enemy.type === "bossWarden") {
-        updateWarden(enemy, angle, playerDistance, dt);
-      } else if (enemy.type === "bossHeart") {
-        updateHeart(enemy, angle, dt);
+      } else if (isBoss(enemy)) {
+        updateBossBehavior(enemy, angle, playerDistance, dt);
       } else {
         const orbit = angle + Math.sin(enemy.phase) * .85;
         if (playerDistance > 185) {
@@ -1375,7 +1474,7 @@
       enemy.x = clamp(enemy.x, WALL + enemy.radius, ROOM_WIDTH - WALL - enemy.radius);
       enemy.y = clamp(enemy.y, WALL + enemy.radius, ROOM_HEIGHT - WALL - enemy.radius);
       resolveObstacleCollision(enemy);
-      if (distance(enemy, player) < player.radius + enemy.radius) damagePlayer(1, enemy);
+      if (!enemy.intangible && distance(enemy, player) < player.radius + enemy.radius) damagePlayer(1, enemy);
     }
     separateEnemies();
     game.enemies = game.enemies.filter(enemy => !enemy.dead);
@@ -1391,13 +1490,14 @@
       enemy.spawnCooldown = Math.min(enemy.spawnCooldown, 1.2);
       enemy.squash = 1;
       game.enemyBullets.length = 0;
-      if (enemy.type === "bossWarden" && nextStage === 2) {
-        enemy.shield = 12 + game.rooms[game.room].chapter * 3;
-        enemy.maxShield = enemy.shield;
-      }
+      enemy.invulnerable = false;
+      enemy.submerged = false;
+      enemy.intangible = false;
+      enemy.telegraph = 0;
+      enemy.attackMode = null;
       shockwave(enemy.x, enemy.y, nextStage === 3 ? "#ef664e" : "#d8ac64", 28);
       screenShake = 13;
-      const label = bossStageNames[enemy.type][nextStage - 1];
+      const label = bossStageNames[enemy.type]?.[nextStage - 1] || "狂怒";
       game.texts.push({ text: `阶段 ${nextStage} · ${label}`, x: ROOM_WIDTH / 2, y: 128, life: 2.2, color: nextStage === 3 ? "#ff8269" : "#f5d28a" });
     }
     if (enemy.stageTransition > 0) {
@@ -1408,53 +1508,306 @@
     return false;
   }
 
-  function updateBrood(enemy, angle, playerDistance, dt) {
-    const stage = enemy.bossStage;
-    enemy.spawnCooldown -= dt;
+  function spawnOwnedEnemy(type, owner, offsetX = 0, offsetY = 0) {
+    if (game.enemies.filter(enemy => !enemy.dead).length >= 11) return null;
+    spawnEnemy(type);
+    const summon = game.enemies.at(-1);
+    summon.x = clamp(owner.x + offsetX, WALL + summon.radius, ROOM_WIDTH - WALL - summon.radius);
+    summon.y = clamp(owner.y + offsetY, WALL + summon.radius, ROOM_HEIGHT - WALL - summon.radius);
+    summon.hp = Math.max(1, Math.ceil(summon.hp * .62));
+    summon.maxHp = summon.hp;
+    summon.summonedBy = owner.id;
+    return summon;
+  }
+
+  function addBossHazard(x, y, radius = 50, life = 4.2, kind = "腐蚀地面") {
+    game.hazards.push({ x, y, radius, life, maxLife: life, phase: random(0, TAU), tick: .1, kind });
+  }
+
+  function addWatchingEye(owner, angle) {
+    game.hazards.push({
+      x: owner.x + Math.cos(angle) * 60, y: owner.y + Math.sin(angle) * 60,
+      vx: Math.cos(angle + .65) * 125, vy: Math.sin(angle + .65) * 125,
+      radius: 13, life: 999, maxLife: 999, phase: angle, tick: .1, kind: "游荡眼球", ownerId: owner.id
+    });
+    owner.orbsSpawned += 1;
+  }
+
+  function startBossTelegraph(enemy, mode, duration, options = {}) {
+    enemy.attackMode = mode;
+    enemy.telegraph = duration;
+    enemy.targetX = options.targetX ?? game.player.x;
+    enemy.targetY = options.targetY ?? game.player.y;
+    enemy.telegraphRadius = options.radius ?? 62;
+    enemy.laserDirections = options.directions || [];
+    enemy.laserOriginX = options.originX ?? enemy.x;
+    enemy.laserOriginY = options.originY ?? enemy.y;
+    enemy.laserLength = options.length ?? 760;
+    enemy.laserWidth = options.width ?? 24;
+    enemy.intangible = mode === "jump" || mode.startsWith("burrow");
+    if (options.invulnerable !== undefined) enemy.invulnerable = options.invulnerable;
+  }
+
+  function fireBossLaser(enemy, angle, originX = enemy.x, originY = enemy.y, length = 760, widthValue = 24) {
+    game.bossLasers.push({ x: originX, y: originY, angle, length, width: widthValue, life: .24, maxLife: .24, kind: "灼热光束" });
+    const dx = game.player.x - originX;
+    const dy = game.player.y - originY;
+    const along = dx * Math.cos(angle) + dy * Math.sin(angle);
+    const across = Math.abs(dx * Math.sin(angle) - dy * Math.cos(angle));
+    if (along > 0 && along < length && across < widthValue / 2 + game.player.radius) damagePlayer(1, { x: originX, y: originY, kind: "Boss 光束" });
+  }
+
+  function resolveBossTelegraph(enemy, dt) {
+    if (enemy.telegraph <= 0) return false;
+    enemy.telegraph -= dt;
+    if (enemy.telegraph > 0) return true;
+    const mode = enemy.attackMode;
+    if (mode === "jump") {
+      enemy.x = clamp(enemy.targetX, WALL + enemy.radius, ROOM_WIDTH - WALL - enemy.radius);
+      enemy.y = clamp(enemy.targetY, WALL + enemy.radius, ROOM_HEIGHT - WALL - enemy.radius);
+      radialFireAtSpeed(enemy, enemy.bossStage === 3 ? 12 : 8, 170 + enemy.bossStage * 15);
+      if (["bossPeep", "bossBloat"].includes(enemy.type)) addBossHazard(enemy.x, enemy.y, enemy.type === "bossBloat" ? 62 : 48, 5.4, enemy.type === "bossBloat" ? "血池" : "泪池");
+      shockwave(enemy.x, enemy.y, "#e16e58", 18);
+    } else if (mode === "stomp") {
+      if (Math.hypot(game.player.x - enemy.targetX, game.player.y - enemy.targetY) < enemy.telegraphRadius + game.player.radius) damagePlayer(2, { x: enemy.targetX, y: enemy.targetY, kind: "巨足践踏" });
+      for (const obstacle of game.obstacles) if (Math.hypot(obstacle.x - enemy.targetX, obstacle.y - enemy.targetY) < enemy.telegraphRadius) damageObstacle(obstacle, 99);
+      shockwave(enemy.targetX, enemy.targetY, "#e96c4f", 26);
+      screenShake = 15;
+    } else if (mode === "laser" || mode === "hand") {
+      for (const direction of enemy.laserDirections) fireBossLaser(enemy, direction, enemy.laserOriginX, enemy.laserOriginY, enemy.laserLength, enemy.laserWidth);
+      directionalBurst(enemy.laserOriginX, enemy.laserOriginY, enemy.laserDirections[0] || 0, "#ff735b", 18, 180);
+      screenShake = 9;
+    } else if (mode === "burrowHead") {
+      enemy.x = clamp(enemy.targetX, WALL + enemy.radius, ROOM_WIDTH - WALL - enemy.radius);
+      enemy.y = clamp(enemy.targetY, WALL + enemy.radius, ROOM_HEIGHT - WALL - enemy.radius);
+      enemy.submerged = false;
+      enemy.intangible = false;
+      enemy.invulnerable = true;
+      enemyFire(enemy, 7, .18);
+      enemy.actionTimer = .75;
+    } else if (mode === "burrowTail") {
+      enemy.x = clamp(enemy.targetX, WALL + enemy.radius, ROOM_WIDTH - WALL - enemy.radius);
+      enemy.y = clamp(enemy.targetY, WALL + enemy.radius, ROOM_HEIGHT - WALL - enemy.radius);
+      enemy.submerged = false;
+      enemy.intangible = false;
+      enemy.invulnerable = false;
+      enemy.actionTimer = 1.35;
+      enemyFire(enemy, 3, .28);
+      game.texts.push({ text: "尾部弱点暴露！", x: enemy.x, y: enemy.y - 58, life: 1.1, color: "#9ee7c1", size: 15 });
+    }
+    enemy.attackMode = null;
+    enemy.intangible = false;
+    return true;
+  }
+
+  function updateBossBehavior(enemy, angle, playerDistance, dt) {
+    game.bossMechanics[enemy.type] = (game.bossMechanics[enemy.type] || 0) + 1;
+    if (resolveBossTelegraph(enemy, dt)) return;
+    const handlers = {
+      bossCoil: updateCoilBoss,
+      bossHopper: updateHopperBoss,
+      bossDevourer: updateDevourerBoss,
+      bossIdol: updateIdolBoss,
+      bossPeep: updatePeepBoss,
+      bossMatron: updateMatronBoss,
+      bossHollow: updateHollowBoss,
+      bossHeart: updateHeartBoss,
+      bossBloat: updateBloatBoss,
+      bossBurrow: updateBurrowBoss,
+      bossInfernal: updateInfernalBoss
+    };
+    handlers[enemy.type](enemy, angle, playerDistance, dt);
+  }
+
+  function turnCardinal(enemy) {
+    if (enemy.moveX) { enemy.moveY = Math.random() < .5 ? -1 : 1; enemy.moveX = 0; }
+    else { enemy.moveX = Math.random() < .5 ? -1 : 1; enemy.moveY = 0; }
+  }
+
+  function moveCardinal(enemy, dt, speedScale = 1) {
+    const edge = WALL + enemy.radius + 8;
+    if ((enemy.moveX < 0 && enemy.x <= edge) || (enemy.moveX > 0 && enemy.x >= ROOM_WIDTH - edge) || (enemy.moveY < 0 && enemy.y <= edge) || (enemy.moveY > 0 && enemy.y >= ROOM_HEIGHT - edge)) turnCardinal(enemy);
+    enemy.x += enemy.moveX * enemy.speed * speedScale * dt;
+    enemy.y += enemy.moveY * enemy.speed * speedScale * dt;
+    enemy.angle = Math.atan2(enemy.moveY, enemy.moveX);
+  }
+
+  function updateCoilBoss(enemy, angle, playerDistance, dt) {
+    moveCardinal(enemy, dt, 1 + enemy.bossStage * .08);
     enemy.hazardCooldown -= dt;
-    if (enemy.charge > 0) {
-      enemy.x += Math.cos(enemy.chargeAngle) * enemy.speed * (stage === 3 ? 5.2 : 4.2) * dt;
-      enemy.y += Math.sin(enemy.chargeAngle) * enemy.speed * (stage === 3 ? 5.2 : 4.2) * dt;
-      enemy.charge -= dt;
-    } else if (enemy.windup > 0) {
-      enemy.windup -= dt;
-      if (enemy.windup <= 0) enemy.charge = .7;
-    } else if (enemy.cooldown <= 0) {
-      enemy.chargeAngle = angle;
-      enemy.windup = stage === 3 ? .38 : .55;
-      enemy.cooldown = stage === 3 ? 1.45 : 2.2;
-    } else if (playerDistance > 150) {
-      enemy.x += Math.cos(angle) * enemy.speed * .45 * dt;
-      enemy.y += Math.sin(angle) * enemy.speed * .45 * dt;
+    if (enemy.hazardCooldown <= 0 && enemy.bossStage >= 2) {
+      addBossHazard(enemy.x - enemy.moveX * 34, enemy.y - enemy.moveY * 34, 24, 5.5, "腐囊");
+      enemy.hazardCooldown = enemy.bossStage === 3 ? .75 : 1.15;
     }
-    if (stage >= 2 && enemy.spawnCooldown <= 0 && game.enemies.length < 9) {
-      spawnEnemy("bat");
-      if (stage === 3) spawnEnemy("leech");
-      enemy.spawnCooldown = stage === 3 ? 3.1 : 4.4;
-      game.texts.push({ text: "腐巢孵化", x: enemy.x, y: enemy.y - 46, life: 1.2 });
-    }
-    if (stage === 3 && enemy.hazardCooldown <= 0) {
-      game.bombs.push({ x: game.player.x + random(-55, 55), y: game.player.y + random(-55, 55), timer: .9, pulse: 0, radius: 12 });
-      enemy.hazardCooldown = 2.5;
+    if (enemy.cooldown <= 0) {
+      if (enemy.bossStage === 3) radialFireAtSpeed(enemy, 8, 155, enemy.angle);
+      else enemyFire(enemy, enemy.bossStage + 1, .14);
+      if (Math.random() < .65) turnCardinal(enemy);
+      enemy.cooldown = enemy.bossStage === 3 ? 1.15 : 1.7;
     }
   }
 
-  function updateWarden(enemy, angle, playerDistance, dt) {
-    const stage = enemy.bossStage;
-    const orbit = angle + (stage >= 2 ? Math.PI / 2 : Math.sin(enemy.phase) * .65);
-    if (playerDistance > (stage === 3 ? 145 : 185)) {
-      enemy.x += Math.cos(orbit) * enemy.speed * (stage === 3 ? 1.35 : .85) * dt;
-      enemy.y += Math.sin(orbit) * enemy.speed * (stage === 3 ? 1.35 : .85) * dt;
+  function updateHopperBoss(enemy, angle, playerDistance, dt) {
+    if (enemy.cooldown <= 0) {
+      if (Math.random() < .68 || enemy.bossStage >= 2) startBossTelegraph(enemy, "jump", enemy.bossStage === 3 ? .42 : .65, { targetX: game.player.x, targetY: game.player.y, radius: 64 });
+      else enemyFire(enemy, 7, .16);
+      enemy.cooldown = enemy.bossStage === 3 ? 1.05 : 1.55;
+    } else if (playerDistance > 210) {
+      enemy.x += Math.cos(angle) * enemy.speed * .35 * dt;
+      enemy.y += Math.sin(angle) * enemy.speed * .35 * dt;
     }
-    if (stage === 3) game.arenaInset = Math.min(82, game.arenaInset + dt * 18);
+  }
+
+  function updateDevourerBoss(enemy, angle, playerDistance, dt) {
+    enemy.spawnCooldown -= dt;
+    if (enemy.charge > 0) {
+      enemy.x += Math.cos(enemy.chargeAngle) * enemy.speed * 5 * dt;
+      enemy.y += Math.sin(enemy.chargeAngle) * enemy.speed * 5 * dt;
+      enemy.charge -= dt;
+    } else if (enemy.windup > 0) {
+      enemy.windup -= dt;
+      if (enemy.windup <= 0) enemy.charge = .72;
+    } else {
+      const alignedX = Math.abs(game.player.x - enemy.x) < 42;
+      const alignedY = Math.abs(game.player.y - enemy.y) < 42;
+      if (enemy.cooldown <= 0 && (alignedX || alignedY)) {
+        enemy.chargeAngle = alignedX ? (game.player.y > enemy.y ? Math.PI / 2 : -Math.PI / 2) : (game.player.x > enemy.x ? 0 : Math.PI);
+        enemy.windup = .58;
+        enemy.cooldown = enemy.bossStage === 3 ? 1.2 : 1.8;
+      } else moveCardinal(enemy, dt, .72);
+    }
+    if (enemy.bossStage >= 2 && enemy.spawnCooldown <= 0) {
+      spawnOwnedEnemy("charger", enemy, -enemy.moveX * 52, -enemy.moveY * 52);
+      enemy.spawnCooldown = enemy.bossStage === 3 ? 2.7 : 4;
+    }
+  }
+
+  function updateIdolBoss(enemy, angle, playerDistance, dt) {
+    enemy.x += (ROOM_WIDTH / 2 + 70 - enemy.x) * .18;
+    enemy.y += (125 - enemy.y) * .18;
+    enemy.spawnCooldown -= dt;
+    if (enemy.cooldown <= 0) {
+      if (enemy.bossStage >= 2 && Math.random() < .42) {
+        spawnOwnedEnemy(enemy.bossStage === 3 ? "cultist" : "bat", enemy, random(-55, 55), 52);
+        if (enemy.bossStage === 3) spawnOwnedEnemy("leech", enemy, random(-70, 70), 64);
+      } else enemyFire(enemy, enemy.bossStage === 3 ? 9 : 5, .14);
+      enemy.cooldown = enemy.bossStage === 3 ? .75 : 1.2;
+    }
+  }
+
+  function updatePeepBoss(enemy, angle, playerDistance, dt) {
+    while (enemy.orbsSpawned < enemy.bossStage - 1) addWatchingEye(enemy, enemy.orbsSpawned ? Math.PI : 0);
+    enemy.hazardCooldown -= dt;
+    if (enemy.hazardCooldown <= 0) {
+      addBossHazard(enemy.x, enemy.y, 38, 4.2, "泪池");
+      enemy.hazardCooldown = 2.4;
+    }
+    if (enemy.cooldown <= 0) {
+      if (Math.random() < .58) startBossTelegraph(enemy, "jump", .58, { targetX: game.player.x, targetY: game.player.y, radius: 58 });
+      else radialFireAtSpeed(enemy, 8, 165, enemy.phase);
+      enemy.cooldown = enemy.bossStage === 3 ? .95 : 1.45;
+    }
+  }
+
+  function updateHollowBoss(enemy, angle, playerDistance, dt) {
+    if (!enemy.moveY) enemy.moveY = Math.random() < .5 ? -1 : 1;
+    const edge = WALL + enemy.radius;
+    if (enemy.x <= edge || enemy.x >= ROOM_WIDTH - edge) enemy.moveX *= -1;
+    if (enemy.y <= edge || enemy.y >= ROOM_HEIGHT - edge) enemy.moveY *= -1;
+    enemy.x += enemy.moveX * enemy.speed * (1 + enemy.bossStage * .15) * dt;
+    enemy.y += enemy.moveY * enemy.speed * (1 + enemy.bossStage * .15) * dt;
+    enemy.angle = Math.atan2(enemy.moveY, enemy.moveX);
+    if (enemy.cooldown <= 0) {
+      radialFireAtSpeed(enemy, 4 + enemy.bossStage * 2, 145 + enemy.bossStage * 18, enemy.angle);
+      enemy.cooldown = enemy.bossStage === 3 ? .9 : 1.45;
+    }
+  }
+
+  function updateMatronBoss(enemy, angle, playerDistance, dt) {
+    enemy.x += (ROOM_WIDTH / 2 - enemy.x) * dt * 2;
+    enemy.y += (ROOM_HEIGHT / 2 - enemy.y) * dt * 2;
+    enemy.spawnCooldown -= dt;
+    if (enemy.spawnCooldown <= 0 && enemy.bossStage >= 2) {
+      spawnOwnedEnemy(enemy.bossStage === 3 ? "charger" : "grunt", enemy, random(-90, 90), random(-65, 65));
+      enemy.spawnCooldown = enemy.bossStage === 3 ? 2.2 : 3.4;
+    }
     if (enemy.cooldown > 0) return;
-    if (stage === 1) enemyFire(enemy, 5, .16);
-    else if (stage === 2) radialFireAtSpeed(enemy, 10, 170, enemy.phase);
-    else {
-      radialFireAtSpeed(enemy, 14, 205, enemy.phase * 1.4);
-      enemyFire(enemy, 5, .13);
+    if (Math.random() < .65 || enemy.bossStage === 3) {
+      startBossTelegraph(enemy, "stomp", enemy.bossStage === 3 ? .48 : .78, { targetX: game.player.x, targetY: game.player.y, radius: enemy.bossStage === 3 ? 74 : 62 });
+    } else {
+      const left = game.player.x < ROOM_WIDTH / 2;
+      startBossTelegraph(enemy, "hand", .6, { originX: left ? WALL : ROOM_WIDTH - WALL, originY: game.player.y, directions: [left ? 0 : Math.PI], length: 230, width: 54 });
     }
-    enemy.cooldown = stage === 1 ? 1.15 : stage === 2 ? .92 : .72;
+    enemy.cooldown = enemy.bossStage === 3 ? .8 : 1.35;
+  }
+
+  function updateHeartBoss(enemy, angle, playerDistance, dt) {
+    updateHeart(enemy, angle, dt);
+    if (enemy.bossStage >= 2 && enemy.spawnCooldown < .25 && game.enemies.filter(candidate => candidate.summonedBy === enemy.id && !candidate.dead).length < 2) {
+      spawnOwnedEnemy(enemy.bossStage === 3 ? "splitter" : "cultist", enemy, random(-70, 70), random(-50, 50));
+    }
+  }
+
+  function updateBloatBoss(enemy, angle, playerDistance, dt) {
+    while (enemy.orbsSpawned < 2) addWatchingEye(enemy, enemy.orbsSpawned * Math.PI);
+    if (enemy.cooldown > 0) return;
+    if (enemy.bossStage >= 2 && Math.random() < .58) {
+      const directions = game.player.y > enemy.y ? [Math.PI / 2] : [0, Math.PI];
+      startBossTelegraph(enemy, "laser", .62, { directions, width: enemy.bossStage === 3 ? 30 : 23 });
+    } else {
+      startBossTelegraph(enemy, "jump", .54, { targetX: game.player.x, targetY: game.player.y, radius: 62 });
+    }
+    enemy.cooldown = enemy.bossStage === 3 ? .82 : 1.25;
+  }
+
+  function updateBurrowBoss(enemy, angle, playerDistance, dt) {
+    if (enemy.actionTimer > 0) {
+      enemy.actionTimer -= dt;
+      if (enemy.actionTimer <= 0) {
+        enemy.submerged = true;
+        enemy.invulnerable = true;
+        enemy.intangible = true;
+        enemy.cooldown = enemy.bossStage === 3 ? .45 : .8;
+      }
+      return;
+    }
+    if (enemy.cooldown > 0) return;
+    enemy.submerged = true;
+    enemy.invulnerable = true;
+    const tail = Math.random() < (enemy.bossStage === 3 ? .64 : .5);
+    startBossTelegraph(enemy, tail ? "burrowTail" : "burrowHead", tail ? .72 : .58, { targetX: game.player.x + random(-70, 70), targetY: game.player.y + random(-55, 55), radius: 56, invulnerable: true });
+  }
+
+  function updateInfernalBoss(enemy, angle, playerDistance, dt) {
+    enemy.spawnCooldown -= dt;
+    if (enemy.bossStage === 1) {
+      if (enemy.spawnCooldown <= 0) {
+        spawnOwnedEnemy("leech", enemy, -65, 35);
+        spawnOwnedEnemy("leech", enemy, 65, 35);
+        enemy.spawnCooldown = 3.2;
+      }
+      if (enemy.cooldown <= 0) { radialFireAtSpeed(enemy, 8, 165); enemy.cooldown = 1.15; }
+      return;
+    }
+    if (enemy.bossStage === 2) {
+      enemy.x += Math.sin(enemy.phase * .8) * enemy.speed * dt;
+      enemy.y += (125 - enemy.y) * dt * 2.5;
+      if (enemy.cooldown <= 0) {
+        if (Math.random() < .45) startBossTelegraph(enemy, "laser", .72, { directions: [Math.PI / 2 - .2, Math.PI / 2 + .2], width: 22 });
+        else enemyFire(enemy, 9, .13);
+        enemy.cooldown = .92;
+      }
+      return;
+    }
+    enemy.intangible = true;
+    if (enemy.cooldown <= 0) {
+      startBossTelegraph(enemy, "stomp", .46, { targetX: game.player.x, targetY: game.player.y, radius: 68 });
+      enemy.cooldown = .7;
+      if (enemy.spawnCooldown <= 0) {
+        spawnOwnedEnemy("leech", enemy, random(-80, 80), 80);
+        enemy.spawnCooldown = 2.8;
+      }
+    }
   }
 
   function updateHeart(enemy, angle, dt) {
@@ -1506,6 +1859,11 @@
       }
     }
     game.bossWaves = game.bossWaves.filter(wave => wave.life > 0 && wave.radius < wave.maxRadius);
+  }
+
+  function updateBossLasers(dt) {
+    for (const laser of game.bossLasers) laser.life -= dt;
+    game.bossLasers = game.bossLasers.filter(laser => laser.life > 0);
   }
 
   function separateEnemies() {
@@ -1618,12 +1976,46 @@
     if (game.routeChoice || game.rooms[game.room].routeSelected) return;
     game.doorOpen = false;
     game.routeChoice = {
+      kind: "build",
       options: [
-        { id: "safe", name: "守烛小径", detail: "下一房间无战斗，恢复生命、护盾与商店启动金", color: "#79bd91" },
-        { id: "risk", name: "双誓险路", detail: "强化诅咒精英，额外遗物与 4 枚弹壳币", color: "#dc715d" }
+        { id: "safe", name: "守烛小径", detail: "下一房间无战斗，恢复生命、护盾与商店启动金", color: "#79bd91", badge: "低风险 · 稳定续航" },
+        { id: "risk", name: "双誓险路", detail: "强化诅咒精英，额外遗物与 4 枚弹壳币", color: "#dc715d", badge: "高风险 · 双倍遗物" }
       ]
     };
     game.texts.push({ text: "选择前路 · 1 / 2", x: ROOM_WIDTH / 2, y: 116, life: 2.2 });
+  }
+
+  function openDescentChoice() {
+    if (game.routeChoice || game.rooms[game.room].routeSelected) return;
+    game.doorOpen = false;
+    game.routeChoice = {
+      kind: "descent",
+      title: "终局下坠路线",
+      subtitle: "原作结构在此分为 Cathedral / Sheol，并分别通往 Chest / Dark Room",
+      options: [
+        { id: "cathedral", name: "哀歌圣堂", detail: "光弹密集、场地清晰，最终进入鎏金遗箱", color: "#83c9dd", badge: "圣堂 → 遗箱" },
+        { id: "sheol", name: "燃罪魔窟", detail: "近身压迫、陷阱更多，最终进入无光深室", color: "#df6e52", badge: "魔窟 → 深室" }
+      ]
+    };
+  }
+
+  function applyEndingBranch(branch) {
+    const light = branch === "cathedral";
+    const stageNames = light ? ["哀歌圣堂", "鎏金遗箱"] : ["燃罪魔窟", "无光深室"];
+    const bossNames = light ? ["圣髓潜兽", "鎏金审判"] : ["烬狱潜兽", "双蹄审判"];
+    for (const room of game.rooms) {
+      if (!room.branchDepth) continue;
+      const index = room.branchDepth - 1;
+      room.biome = stageNames[index];
+      room.theme = light ? 4 : 5;
+      if (room.kind === "boss") {
+        room.name = bossNames[index];
+        room.bossName = bossNames[index];
+      } else if (room.kind === "treasure") room.name = `${stageNames[index]}宝库`;
+      else if (room.kind === "shop") room.name = "终路商贩";
+      else room.name = randomChoice(roomNames[room.theme]);
+    }
+    game.finalBranch = branch;
   }
 
   function chooseRoute(choice) {
@@ -1634,7 +2026,10 @@
     game.rooms[game.room].routeSelected = option.id;
     game.rooms[game.room].cleared = true;
     game.routeChoices += 1;
-    if (option.id === "safe") {
+    if (game.routeChoice.kind === "descent") {
+      applyEndingBranch(option.id);
+      game.texts.push({ text: `终路已定 · ${option.badge}`, x: ROOM_WIDTH / 2, y: 132, life: 2.2, color: option.color });
+    } else if (option.id === "safe") {
       nextRoom.kind = "sanctuary";
       nextRoom.name = "守烛圣所";
       nextRoom.enemies = [];
@@ -1649,7 +2044,7 @@
     }
     game.routeChoice = null;
     game.doorOpen = true;
-    sound(option.id === "risk" ? 115 : 390, .22, option.id === "risk" ? "sawtooth" : "sine", .02);
+    sound(["risk", "sheol"].includes(option.id) ? 115 : 390, .22, ["risk", "sheol"].includes(option.id) ? "sawtooth" : "sine", .02);
     return true;
   }
 
@@ -1658,7 +2053,8 @@
     game.itemsFound += 1;
     game.itemStacks[item.id] = (game.itemStacks[item.id] || 0) + 1;
     updateSynergies();
-    game.texts.push({ text: `${item.icon} ${item.name} · ${item.detail}`, x: ROOM_WIDTH / 2, y: 122, life: 2.8, color: item.cursed ? "#ed7793" : "#ffe09a", size: 16 });
+    game.texts.push({ text: `${item.icon} ${item.name} · 已自动生效 · ${item.detail}`, x: ROOM_WIDTH / 2, y: 122, life: 3.2, color: item.cursed ? "#ed7793" : "#ffe09a", size: 16 });
+    if (guideOpen) renderGuide();
   }
 
   function updateSynergies() {
@@ -1714,7 +2110,7 @@
     const damageSummary = topSource ? `${sourceLabels[topSource[0]] || topSource[0]} ${Math.round(topSource[1])}` : "无";
     const deathSummary = won ? "完成净化" : game.lastDamageSource;
     const unlockSummary = game.unlocks.length ? `<span>新解锁 ${game.unlocks.join(" / ")}</span>` : "";
-    document.querySelector("#end-stats").innerHTML = `<span>${heroes[game.player.hero].name} · ${weaponNames[game.player.weapon]}</span><span>击败 ${game.kills}</span><span>Boss ${game.bossKills}/3</span><span>遗物 ${game.itemsFound}</span><span>无伤房 ${game.perfectRooms}</span><span>总伤害 ${Math.round(game.damageDealt)}</span><span>主力输出 ${damageSummary}</span><span>承受伤害 ${game.damageTaken.toFixed(1)}</span><span>${won ? "结局" : "死因"} ${deathSummary}</span><span>存活 ${minutes}:${seconds}</span><span>关卡 ${game.room + 1}/${game.rooms.length}</span>${unlockSummary}`;
+    document.querySelector("#end-stats").innerHTML = `<span>${heroes[game.player.hero].name} · ${weaponNames[game.player.weapon]}</span><span>击败 ${game.kills}</span><span>Boss ${game.bossKills}/11</span><span>终路 ${game.finalBranch === "sheol" ? "魔窟" : game.finalBranch === "cathedral" ? "圣堂" : "未选择"}</span><span>遗物 ${game.itemsFound}</span><span>无伤房 ${game.perfectRooms}</span><span>总伤害 ${Math.round(game.damageDealt)}</span><span>主力输出 ${damageSummary}</span><span>承受伤害 ${game.damageTaken.toFixed(1)}</span><span>${won ? "结局" : "死因"} ${deathSummary}</span><span>存活 ${minutes}:${seconds}</span><span>关卡 ${game.room + 1}/${game.rooms.length}</span>${unlockSummary}`;
     endScreen.classList.add("visible");
   }
 
@@ -1729,6 +2125,7 @@
     if (game) {
       drawBossArena();
       drawBossWaves();
+      drawBossLasers();
       drawHazards();
       drawGuardianLinks();
       drawObstacles();
@@ -1759,7 +2156,9 @@
       { floor: "#44393b", floorDark: "#30282b", grout: "#655154", wall: "#241d21", trim: "#6f5655", stain: "#21191d", glow: "#d29a58" },
       { floor: "#41392f", floorDark: "#2b2721", grout: "#685946", wall: "#241f1a", trim: "#735e43", stain: "#251d17", glow: "#d5aa61" },
       { floor: "#4c332f", floorDark: "#30201f", grout: "#75493f", wall: "#26191a", trim: "#824c3e", stain: "#2a1516", glow: "#e47b47" },
-      { floor: "#373246", floorDark: "#252230", grout: "#574d6a", wall: "#1d1a27", trim: "#625779", stain: "#1c1625", glow: "#9d72b0" }
+      { floor: "#373246", floorDark: "#252230", grout: "#574d6a", wall: "#1d1a27", trim: "#625779", stain: "#1c1625", glow: "#9d72b0" },
+      { floor: "#293d46", floorDark: "#18272f", grout: "#416573", wall: "#142128", trim: "#527785", stain: "#13232b", glow: "#79c7db" },
+      { floor: "#3d2828", floorDark: "#251719", grout: "#674038", wall: "#1e1215", trim: "#7c4939", stain: "#260f14", glow: "#df6848" }
     ];
     const palette = palettes[theme];
     context.fillStyle = "#0e0b10";
@@ -1843,6 +2242,25 @@
     }
   }
 
+  function drawBossLasers() {
+    for (const laser of game.bossLasers) {
+      const alpha = clamp(laser.life / laser.maxLife, 0, 1);
+      const endX = laser.x + Math.cos(laser.angle) * laser.length;
+      const endY = laser.y + Math.sin(laser.angle) * laser.length;
+      context.save();
+      context.lineCap = "round";
+      context.strokeStyle = `rgba(126, 16, 30, ${.68 * alpha})`;
+      context.shadowColor = "#f02e45";
+      context.shadowBlur = 22;
+      context.lineWidth = laser.width;
+      context.beginPath(); context.moveTo(laser.x, laser.y); context.lineTo(endX, endY); context.stroke();
+      context.strokeStyle = `rgba(255, 190, 142, ${.9 * alpha})`;
+      context.lineWidth = Math.max(3, laser.width * .22);
+      context.beginPath(); context.moveTo(laser.x, laser.y); context.lineTo(endX, endY); context.stroke();
+      context.restore();
+    }
+  }
+
   function drawFloorMarks(seed, palette) {
     context.save();
     for (let index = 0; index < 14; index += 1) {
@@ -1879,7 +2297,7 @@
       context.save();
       context.translate(x, y);
       context.rotate(angle);
-      if (theme === 2) drawAshProp(index, palette);
+      if (theme === 2 || theme === 5) drawAshProp(index, palette);
       else if (theme === 3) drawFleshProp(index, palette);
       else drawBoneProp(index, palette);
       context.restore();
@@ -2360,6 +2778,21 @@
 
   function drawHazards() {
     for (const hazard of game.hazards) {
+      if (hazard.kind === "游荡眼球") {
+        context.save();
+        context.translate(hazard.x, hazard.y);
+        context.rotate(Math.atan2(hazard.vy, hazard.vx));
+        context.fillStyle = "#e6d7c0";
+        context.strokeStyle = "#432530";
+        context.lineWidth = 4;
+        context.beginPath(); context.ellipse(0, 0, 16, 12, 0, 0, TAU); context.fill(); context.stroke();
+        drawEye(2, 0, 8, 3, 0, true);
+        context.strokeStyle = "#9b3f51";
+        context.lineWidth = 3;
+        context.beginPath(); context.moveTo(-14, 1); context.quadraticCurveTo(-23, 8, -30, -1); context.stroke();
+        context.restore();
+        continue;
+      }
       const fade = clamp(hazard.life / Math.min(.8, hazard.maxLife), 0, 1);
       const pulse = Math.sin(hazard.phase) * 3;
       const gradient = context.createRadialGradient(hazard.x, hazard.y, 5, hazard.x, hazard.y, hazard.radius + pulse);
@@ -2585,9 +3018,99 @@
 
   function drawBoss(enemy) {
     context.scale(1.28, 1.28);
-    if (enemy.type === "bossBrood") drawBroodBoss(enemy);
-    else if (enemy.type === "bossHeart") drawHeartBoss(enemy);
-    else drawWardenBoss(enemy);
+    if (enemy.type === "bossHeart") drawHeartBoss(enemy);
+    else if (enemy.type === "bossDevourer") drawBroodBoss(enemy);
+    else if (enemy.type === "bossInfernal") drawInfernalBoss(enemy);
+    else drawCodexBoss(enemy);
+  }
+
+  function drawCodexBoss(enemy) {
+    const palettes = {
+      bossCoil: ["#8e6546", "#3c2923"], bossHopper: ["#a15d57", "#44252b"], bossIdol: ["#74604f", "#32251f"],
+      bossPeep: ["#b77b56", "#4a2d29"], bossMatron: ["#9b4659", "#3d1d2b"], bossHollow: ["#7b6c91", "#31283d"],
+      bossBloat: ["#7f3c4d", "#351a27"], bossBurrow: ["#647f73", "#25342f"]
+    };
+    const [flesh, outline] = palettes[enemy.type] || ["#77515d", "#2d1c27"];
+    if (enemy.type === "bossBurrow" && enemy.submerged) {
+      context.rotate(-enemy.angle);
+      context.fillStyle = "#261d20";
+      context.beginPath(); context.ellipse(0, 12, 52, 20, 0, 0, TAU); context.fill();
+      context.strokeStyle = "#85c2a1";
+      context.lineWidth = 4;
+      context.setLineDash([8, 7]);
+      context.beginPath(); context.arc(0, 4, 33 + Math.sin(enemy.phase * 6) * 4, 0, TAU); context.stroke();
+      context.setLineDash([]);
+      return;
+    }
+    if (["bossCoil", "bossHollow", "bossBurrow"].includes(enemy.type)) {
+      context.rotate(-enemy.angle);
+      for (let segment = 4; segment >= 1; segment -= 1) {
+        const wave = Math.sin(enemy.phase * 4 + segment) * 8;
+        context.fillStyle = enemy.flash > 0 ? "#fff" : flesh;
+        context.strokeStyle = outline;
+        context.lineWidth = 4;
+        context.beginPath(); context.ellipse(-segment * 22, wave, 20 - segment, 17 - segment * .7, 0, 0, TAU); context.fill(); context.stroke();
+      }
+      drawBlob(31, 13, enemy.id, enemy.flash > 0 ? "#fff" : flesh, outline, 5);
+      drawEye(7, -8, 7, 2, 1, true);
+      context.fillStyle = "#27181d";
+      context.beginPath(); context.ellipse(17, 7, 13, 8, 0, 0, TAU); context.fill();
+      if (enemy.type === "bossBurrow" && !enemy.invulnerable) {
+        context.strokeStyle = "#8ff0bd";
+        context.lineWidth = 5;
+        context.beginPath(); context.arc(-88, 0, 14, 0, TAU); context.stroke();
+      }
+      return;
+    }
+    context.rotate(-enemy.angle);
+    if (enemy.type === "bossIdol") {
+      for (let limb = -1; limb <= 1; limb += 2) drawLimb(limb * 20, 8, limb * 45, 34, 10, flesh);
+      drawBlob(41, 15, enemy.id, enemy.flash > 0 ? "#fff" : flesh, outline, 6);
+      context.fillStyle = "#22191a";
+      context.beginPath(); context.ellipse(6, 7, 22, 17, 0, 0, TAU); context.fill();
+      for (let eye = -1; eye <= 1; eye += 1) drawEye(eye * 12, -7 + Math.abs(eye) * 4, 6, 1, 1, true);
+      return;
+    }
+    if (enemy.type === "bossMatron") {
+      context.strokeStyle = "#4a2330";
+      context.lineWidth = 12;
+      context.beginPath(); context.arc(0, 0, 45, 0, TAU); context.stroke();
+      drawBlob(38, 14, enemy.id, enemy.flash > 0 ? "#fff" : flesh, outline, 6);
+      drawEye(0, -5, 15, 0, 2, true);
+      context.fillStyle = "#351822";
+      context.beginPath(); context.ellipse(0, 21, 15, 7, 0, 0, TAU); context.fill();
+      return;
+    }
+    const squat = enemy.type === "bossHopper" ? 1.15 : .96;
+    context.scale(1, squat);
+    drawLimb(-18, 17, -28, 33, 10, flesh);
+    drawLimb(18, 17, 28, 33, 10, flesh);
+    drawBlob(38, 14, enemy.id, enemy.flash > 0 ? "#fff" : flesh, outline, 6);
+    drawFleshTexture(36, enemy.id * 23, outline);
+    if (enemy.type === "bossBloat") {
+      context.fillStyle = "#391923";
+      context.beginPath(); context.ellipse(-13, -8, 10, 7, 0, 0, TAU); context.ellipse(13, -8, 10, 7, 0, 0, TAU); context.fill();
+    } else {
+      drawEye(-11, -8, 8, 1, 1, true);
+      drawEye(12, -6, enemy.type === "bossPeep" ? 11 : 7, 1, 1, true);
+    }
+    context.fillStyle = "#321b23";
+    context.beginPath(); context.ellipse(3, 15, enemy.type === "bossHopper" ? 18 : 12, 8, 0, 0, TAU); context.fill();
+  }
+
+  function drawInfernalBoss(enemy) {
+    context.rotate(-enemy.angle);
+    context.strokeStyle = "#342025";
+    context.fillStyle = enemy.flash > 0 ? "#fff" : "#713c44";
+    context.lineWidth = 6;
+    context.beginPath(); context.moveTo(-20, -24); context.quadraticCurveTo(-44, -50, -50, -16); context.quadraticCurveTo(-36, -30, -25, -5); context.fill(); context.stroke();
+    context.beginPath(); context.moveTo(20, -24); context.quadraticCurveTo(44, -50, 50, -16); context.quadraticCurveTo(36, -30, 25, -5); context.fill(); context.stroke();
+    drawBlob(40, 14, enemy.id, enemy.flash > 0 ? "#fff" : "#7d4149", "#301b23", 6);
+    drawFleshTexture(38, enemy.id * 53, "#441f28");
+    drawEye(-12, -7, 8, 1, 1, true);
+    drawEye(12, -7, 8, 1, 1, true);
+    context.fillStyle = "#25151c";
+    context.beginPath(); context.ellipse(0, 17, 15, 9, 0, 0, TAU); context.fill();
   }
 
   function drawBroodBoss(enemy) {
@@ -2698,7 +3221,8 @@
       context.fillStyle = "#e9d4b0";
       context.font = "800 12px system-ui";
       context.textAlign = "center";
-      context.fillText(`${game.rooms[game.room].name} · 阶段 ${enemy.bossStage} ${bossStageNames[enemy.type][enemy.bossStage - 1]}`, ROOM_WIDTH / 2, y - 7);
+      const guard = enemy.invulnerable ? " · 甲壳封闭" : enemy.type === "bossBurrow" ? " · 尾部可伤" : "";
+      context.fillText(`${game.rooms[game.room].name} · 阶段 ${enemy.bossStage} ${bossStageNames[enemy.type][enemy.bossStage - 1]}${guard}`, ROOM_WIDTH / 2, y - 7);
       context.textAlign = "left";
     }
   }
@@ -2747,28 +3271,55 @@
 
   function drawThreatTelegraphs() {
     for (const enemy of game.enemies) {
-      if (enemy.dead || enemy.type !== "charger" || enemy.windup <= 0) continue;
-      const strength = 1 - clamp(enemy.windup / .48, 0, 1);
-      context.save();
-      context.translate(enemy.x, enemy.y);
-      context.rotate(enemy.chargeAngle);
-      const warning = context.createLinearGradient(enemy.radius, 0, 290, 0);
-      warning.addColorStop(0, `rgba(255, 183, 76, ${.24 + strength * .22})`);
-      warning.addColorStop(1, "rgba(222, 53, 43, 0)");
-      context.fillStyle = warning;
-      context.beginPath();
-      context.moveTo(enemy.radius, -8 - strength * 4);
-      context.lineTo(290, -2);
-      context.lineTo(290, 2);
-      context.lineTo(enemy.radius, 8 + strength * 4);
-      context.closePath();
-      context.fill();
-      context.strokeStyle = `rgba(255, 101, 67, ${.48 + strength * .45})`;
-      context.lineWidth = 2 + strength * 2;
-      context.setLineDash([10, 8]);
-      context.beginPath(); context.moveTo(enemy.radius, 0); context.lineTo(260, 0); context.stroke();
-      context.setLineDash([]);
-      context.restore();
+      if (enemy.dead) continue;
+      if ((enemy.type === "charger" || enemy.type === "bossDevourer") && enemy.windup > 0) {
+        const strength = 1 - clamp(enemy.windup / .58, 0, 1);
+        context.save();
+        context.translate(enemy.x, enemy.y);
+        context.rotate(enemy.chargeAngle);
+        const warning = context.createLinearGradient(enemy.radius, 0, 360, 0);
+        warning.addColorStop(0, `rgba(255, 183, 76, ${.24 + strength * .22})`);
+        warning.addColorStop(1, "rgba(222, 53, 43, 0)");
+        context.fillStyle = warning;
+        context.beginPath();
+        context.moveTo(enemy.radius, -8 - strength * 5);
+        context.lineTo(360, -2);
+        context.lineTo(360, 2);
+        context.lineTo(enemy.radius, 8 + strength * 5);
+        context.closePath();
+        context.fill();
+        context.strokeStyle = `rgba(255, 101, 67, ${.48 + strength * .45})`;
+        context.lineWidth = 2 + strength * 2;
+        context.setLineDash([10, 8]);
+        context.beginPath(); context.moveTo(enemy.radius, 0); context.lineTo(330, 0); context.stroke();
+        context.setLineDash([]);
+        context.restore();
+      }
+      if (enemy.telegraph <= 0) continue;
+      const pulse = .55 + Math.sin(game.elapsed * 20) * .22;
+      if (["jump", "stomp", "burrowHead", "burrowTail"].includes(enemy.attackMode)) {
+        context.save();
+        context.strokeStyle = enemy.attackMode === "burrowTail" ? `rgba(123, 232, 174, ${pulse})` : `rgba(255, 92, 67, ${pulse})`;
+        context.fillStyle = enemy.attackMode === "burrowTail" ? "rgba(86, 185, 133, .12)" : "rgba(223, 58, 42, .13)";
+        context.lineWidth = 4;
+        context.setLineDash([11, 8]);
+        context.beginPath(); context.arc(enemy.targetX, enemy.targetY, enemy.telegraphRadius, 0, TAU); context.fill(); context.stroke();
+        context.setLineDash([]);
+        context.beginPath(); context.moveTo(enemy.x, enemy.y); context.lineTo(enemy.targetX, enemy.targetY); context.stroke();
+        context.restore();
+      }
+      if (["laser", "hand"].includes(enemy.attackMode)) {
+        context.save();
+        context.translate(enemy.laserOriginX, enemy.laserOriginY);
+        context.strokeStyle = `rgba(255, 103, 70, ${pulse})`;
+        context.lineWidth = Math.max(5, enemy.laserWidth * .28);
+        context.setLineDash([15, 10]);
+        for (const direction of enemy.laserDirections) {
+          context.beginPath(); context.moveTo(0, 0); context.lineTo(Math.cos(direction) * enemy.laserLength, Math.sin(direction) * enemy.laserLength); context.stroke();
+        }
+        context.setLineDash([]);
+        context.restore();
+      }
     }
   }
 
@@ -2860,10 +3411,17 @@
         context.textAlign = "center";
         context.font = "800 11px system-ui";
         context.fillStyle = "#f4e6c4";
-        context.fillText(pickup.item.name, 0, 39);
+        context.fillText(pickup.item.name, 0, 35);
         context.font = "800 10px system-ui";
-        context.fillStyle = pickup.shopItem ? affordable ? "#91dfaa" : "#ef7866" : "#a99b88";
-        context.fillText(pickup.shopItem ? `◉ ${pickup.price} · ${affordable ? "靠近 / 点击购买" : `持有 ${game.player.coins}`}` : pickup.item.detail, 0, 52);
+        context.fillStyle = "#c7b9a4";
+        context.fillText(pickup.item.detail, 0, 49);
+        if (pickup.shopItem) {
+          context.fillStyle = affordable ? "#91dfaa" : "#ef7866";
+          context.fillText(`◉ ${pickup.price} · ${affordable ? "靠近 / 点击购买" : `持有 ${game.player.coins}`}`, 0, 62);
+        } else {
+          context.fillStyle = "#8fc69f";
+          context.fillText("触碰后自动生效", 0, 62);
+        }
         if (pickup.shopItem) {
           context.strokeStyle = affordable ? "#79c995" : "#a94d49";
           context.lineWidth = 2;
@@ -2990,7 +3548,7 @@
     drawHudPanel(55, 55, 242, 64);
     context.fillStyle = "#f6e2b4";
     context.font = "700 15px system-ui";
-    context.fillText(`第${room.chapter + 1}章·${room.floorRoom}  ${room.name}`, 70, 78);
+    context.fillText(`深度 ${room.depth}/11 · ${room.biome} ${room.floorLabel} · 房间 ${room.floorRoom}`, 70, 78);
     if (room.modifier) {
       context.fillStyle = roomModifiers[room.modifier].color;
       context.font = "900 10px system-ui";
@@ -3031,11 +3589,15 @@
   }
 
   function drawMinimap() {
-    const startX = ROOM_WIDTH - 60 - game.rooms.length * 30;
+    const currentDepth = game.rooms[game.room].depth;
+    const floorRooms = game.rooms.filter(room => room.depth === currentDepth);
+    const floorStart = game.rooms.findIndex(room => room.depth === currentDepth);
+    const startX = ROOM_WIDTH - 60 - floorRooms.length * 30;
     const y = 86;
-    for (let index = 0; index < game.rooms.length; index += 1) {
-      const room = game.rooms[index];
-      context.fillStyle = index < game.room ? "#6f875d" : index === game.room ? "#e8bd63" : room.kind === "boss" ? "#682f3e" : "#302b31";
+    for (let index = 0; index < floorRooms.length; index += 1) {
+      const room = floorRooms[index];
+      const globalIndex = floorStart + index;
+      context.fillStyle = globalIndex < game.room ? "#6f875d" : globalIndex === game.room ? "#e8bd63" : room.kind === "boss" ? "#682f3e" : "#302b31";
       context.fillRect(startX + index * 30, y, 22, 16);
       if (room.kind === "treasure") {
         context.fillStyle = "#d8af55";
@@ -3045,11 +3607,12 @@
         context.fillStyle = "#d58d48";
         context.beginPath(); context.arc(startX + index * 30 + 11, y + 8, 4, 0, TAU); context.fill();
       }
-      if (index < game.rooms.length - 1) { context.fillStyle = "#675a4c"; context.fillRect(startX + index * 30 + 22, y + 6, 8, 4); }
-      if ((index + 1) % 6 === 0 && index < game.rooms.length - 1) {
-        context.fillStyle = "#d1a657";
-        context.fillRect(startX + index * 30 + 25, y - 4, 3, 24);
-      }
+      if (index < floorRooms.length - 1) { context.fillStyle = "#675a4c"; context.fillRect(startX + index * 30 + 22, y + 6, 8, 4); }
+    }
+    const depthStart = ROOM_WIDTH - 60 - chapters.length * 16;
+    for (let depth = 1; depth <= chapters.length; depth += 1) {
+      context.fillStyle = depth < currentDepth ? "#6f875d" : depth === currentDepth ? "#e8bd63" : "#302b31";
+      context.beginPath(); context.arc(depthStart + (depth - 1) * 16 + 5, y + 27, depth === currentDepth ? 5 : 3.5, 0, TAU); context.fill();
     }
   }
 
@@ -3100,17 +3663,18 @@
   }
 
   function drawItems() {
-    let x = 58;
-    const y = ROOM_HEIGHT - 72;
+    let slot = 0;
     for (const item of items) {
       const count = game.itemStacks[item.id];
       if (!count) continue;
+      const x = 58 + slot % 16 * 44;
+      const y = ROOM_HEIGHT - 72 - Math.floor(slot / 16) * 38;
       drawHudPanel(x, y, 38, 32);
       drawItemGlyph(item, x + 15, y + 16, .55);
       context.fillStyle = "#f4ead0";
       context.font = "800 10px system-ui";
       context.fillText(`×${count}`, x + 25, y + 25);
-      x += 44;
+      slot += 1;
     }
   }
 
@@ -3142,15 +3706,15 @@
   }
 
   function drawRouteChoice() {
-    context.fillStyle = "rgba(10, 7, 11, .9)";
+    context.fillStyle = "rgba(10, 7, 11, .96)";
     context.fillRect(WALL, WALL, ROOM_WIDTH - WALL * 2, ROOM_HEIGHT - WALL * 2);
     context.textAlign = "center";
     context.fillStyle = "#f3dfb6";
     context.font = "900 30px system-ui";
-    context.fillText("前路需要代价", ROOM_WIDTH / 2, 132);
+    context.fillText(game.routeChoice.title || "前路需要代价", ROOM_WIDTH / 2, 132);
     context.fillStyle = "#aa9987";
     context.font = "700 13px system-ui";
-    context.fillText("选择安全恢复，或接受强化精英以争取额外构筑", ROOM_WIDTH / 2, 158);
+    context.fillText(game.routeChoice.subtitle || "选择安全恢复，或接受强化精英以争取额外构筑", ROOM_WIDTH / 2, 158);
     game.routeChoice.options.forEach((option, index) => {
       const x = index === 0 ? 176 : 504;
       const y = 190;
@@ -3176,7 +3740,7 @@
       details.forEach((detail, line) => context.fillText(detail, x + widthValue / 2, y + 112 + line * 23));
       context.fillStyle = option.color;
       context.font = "800 12px system-ui";
-      context.fillText(index === 0 ? "低风险 · 稳定续航" : "高风险 · 双倍遗物", x + widthValue / 2, y + 158);
+      context.fillText(option.badge, x + widthValue / 2, y + 158);
     });
     context.textAlign = "left";
   }
@@ -3185,7 +3749,7 @@
     const dt = Math.min((time - lastTime) / 1000 || 0, .033);
     lastTime = time;
     if (hitStop > 0) hitStop = Math.max(0, hitStop - dt);
-    else update(dt);
+    else if (!guideOpen) update(dt);
     render();
     requestAnimationFrame(frame);
   }
@@ -3209,9 +3773,15 @@
 
   function handleKeyDown(event) {
     const code = normalizedCode(event);
+    if (code === "KeyI" || code === "Escape") {
+      event.preventDefault();
+      setGuideOpen(code === "Escape" ? false : !guideOpen);
+      return;
+    }
+    if (guideOpen) return;
     if (game && game.routeChoice && ["Digit1", "Digit2"].includes(code)) {
       event.preventDefault();
-      chooseRoute(code === "Digit1" ? "safe" : "risk");
+      chooseRoute(game.routeChoice.options[code === "Digit1" ? 0 : 1].id);
       return;
     }
     if (!["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(code)) return;
@@ -3248,8 +3818,8 @@
   canvas.addEventListener("pointerdown", event => {
     const point = toRoom(event.clientX, event.clientY);
     if (game && game.routeChoice && point.y >= 180 && point.y <= 390) {
-      if (point.x >= 176 && point.x <= 456) chooseRoute("safe");
-      if (point.x >= 504 && point.x <= 784) chooseRoute("risk");
+      if (point.x >= 176 && point.x <= 456) chooseRoute(game.routeChoice.options[0].id);
+      if (point.x >= 504 && point.x <= 784) chooseRoute(game.routeChoice.options[1].id);
       event.preventDefault();
       return;
     }
@@ -3313,6 +3883,8 @@
   }));
   document.querySelector("#start-button").addEventListener("click", newGame);
   document.querySelector("#restart-button").addEventListener("click", newGame);
+  document.querySelector("#guide-button").addEventListener("click", () => setGuideOpen(!guideOpen));
+  document.querySelector("#guide-close").addEventListener("click", () => setGuideOpen(false));
 
   window.__game = {
     start: newGame,
@@ -3320,12 +3892,17 @@
       if (!game) return { state: "menu" };
       return {
         state: game.state,
+        guideOpen,
         outcome: game.outcome || null,
         room: game.room,
         roomCount: game.rooms.length,
         roomType: game.rooms[game.room].kind,
         roomModifier: game.rooms[game.room].modifier || null,
         chapter: game.rooms[game.room].chapter + 1,
+        depth: game.rooms[game.room].depth,
+        biome: game.rooms[game.room].biome,
+        finalBranch: game.finalBranch,
+        bossMechanics: { ...game.bossMechanics },
         floorRoom: game.rooms[game.room].floorRoom,
         roomKinds: game.rooms.map(room => room.kind),
         routeChoice: game.routeChoice ? game.routeChoice.options.map(option => option.id) : null,
@@ -3334,7 +3911,7 @@
         plannedEnemyTypes: game.rooms.flatMap(room => room.enemies),
         enemyTypes: game.enemies.map(enemy => enemy.type),
         enemyHealth: game.enemies.map(enemy => enemy.hp),
-        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, statuses: { ...enemy.statuses } })),
+        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, bossStage: enemy.bossStage, attackMode: enemy.attackMode, telegraph: enemy.telegraph, invulnerable: enemy.invulnerable, statuses: { ...enemy.statuses } })),
         doorOpen: game.doorOpen,
         pickupTypes: game.pickups.map(pickup => pickup.type),
         shopOffers: game.pickups.filter(pickup => pickup.shopItem && !pickup.dead).map(pickup => ({
@@ -3366,6 +3943,7 @@
         hazards: game.hazards.length,
         slashes: game.slashes.length,
         bossWaves: game.bossWaves.length,
+        bossLasers: game.bossLasers.length,
         arenaInset: game.arenaInset,
         bossStage: game.enemies.find(enemy => isBoss(enemy))?.bossStage || 0,
         eliteAffixes: { ...game.affixesSeen },
@@ -3431,7 +4009,7 @@
     },
     exitRoom() {
       if (!game || game.state !== "playing") return;
-      if (game.routeChoice) chooseRoute("risk");
+      if (game.routeChoice) chooseRoute(game.routeChoice.options.find(option => option.id === "risk")?.id || game.routeChoice.options[0].id);
       if (!game.doorOpen) return;
       game.player.x = ROOM_WIDTH - WALL - game.player.radius;
     },
@@ -3468,6 +4046,9 @@
     },
     useSkill() {
       activateSkill();
+    },
+    toggleGuide(open) {
+      setGuideOpen(open === undefined ? !guideOpen : open);
     }
   };
 
