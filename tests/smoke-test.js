@@ -127,7 +127,15 @@ const fireButton = element("fire-button");
 const touchFireEvent = { pointerId: 91, pointerType: "touch", preventDefault() {}, currentTarget: fireButton };
 fireButton.handlers.pointerdown[0](touchFireEvent);
 assert(game.getState().input.firing && game.getState().input.firePointerId === 91, "Touch fire press failed");
-windowEvents.pointerup[0]({ pointerId: 91, pointerType: "touch" });
+fireButton.handlers.pointerdown[0]({ ...touchFireEvent, pointerId: 92 });
+assert(game.getState().input.firing && game.getState().input.firePointerId === 92, "A stale touch pointer blocked the next fire press");
+game.goToRoom(1);
+assert(!game.getState().input.firing && game.getState().input.firePointerId === null, "Room transition did not clear held fire input");
+const emptyRoomShots = game.getState().player.shotSequence;
+fireButton.handlers.pointerdown[0]({ ...touchFireEvent, pointerId: 93 });
+step(30);
+assert(game.getState().playerBullets > 0 && game.getState().player.shotSequence > emptyRoomShots, "Mobile fire gave no feedback in an enemy-free room");
+windowEvents.pointerup[0]({ pointerId: 93, pointerType: "touch" });
 assert(!game.getState().input.firing && game.getState().input.firePointerId === null, "Touch fire release remained stuck");
 
 game.toggleWorkshop(true);
@@ -333,6 +341,7 @@ console.log(JSON.stringify({
   keyboardMovement: "passed",
   keyboardShooting: "passed",
   touchFireRelease: "passed",
+  touchCrossRoomFire: "passed",
   eliteAffixes: "passed",
   summonerRole: "passed",
   controlHazards: "passed",

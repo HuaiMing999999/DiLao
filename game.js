@@ -661,6 +661,7 @@
   }
 
   function enterRoom(index) {
+    releaseFire();
     game.room = index;
     game.roomTime = 0;
     game.doorOpen = false;
@@ -1174,8 +1175,8 @@
       const target = nearestEnemy();
       if (target) {
         player.aimAngle = Math.atan2(target.y - player.y, target.x - player.x);
-        firePlayer(player.aimAngle);
       }
+      firePlayer(player.aimAngle);
     }
 
     updateBullets(dt);
@@ -4328,7 +4329,7 @@
   }
   fireButton.addEventListener("pointerdown", event => {
     event.preventDefault();
-    if (pointer.firePointerId !== null) return;
+    if (pointer.firePointerId !== null) releaseFire();
     pointer.firePointerId = event.pointerId;
     try { event.currentTarget.setPointerCapture(event.pointerId); } catch {}
     pointer.down = true;
