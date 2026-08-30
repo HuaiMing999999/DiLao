@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#17151d">
+  <title>弹壳地牢 · Dungeon Dodge</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="game-shell">
+    <canvas id="game" tabindex="0" aria-label="弹壳地牢游戏画面"></canvas>
+
+    <section id="start-screen" class="screen visible">
+      <div class="screen-panel">
+        <div class="sigil" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="eyebrow">A HAND-DRAWN DUNGEON</div>
+        <h1>弹壳地牢</h1>
+        <p class="subtitle">选择英雄与流派，穿越 3 章 18 个房间，击败三位地牢领主。</p>
+        <div class="hero-select" aria-label="选择英雄">
+          <button class="hero-card selected" data-hero="breaker"><b>爆破者</b><small>摧毁流</small><em>爆裂震波</em></button>
+          <button class="hero-card" data-hero="gambler"><b>铸币客</b><small>硬币流</small><em>弹壳风暴</em></button>
+          <button class="hero-card" data-hero="seer"><b>秘仪师</b><small>咒文流</small><em>连锁雷咒</em></button>
+          <button class="hero-card" data-hero="titan"><b>囚笼巨人</b><small>泰坦流</small><em>不屈怒吼</em></button>
+        </div>
+        <div class="controls-card">
+          <span><b>WASD</b> 移动</span>
+          <span><b>鼠标 / 方向键</b> 射击</span>
+          <span><b>空格</b> 翻滚</span>
+          <span><b>Q</b> 英雄技能</span>
+        </div>
+        <button id="start-button">推开地窖之门</button>
+        <p class="small">原创代码绘制 · 支持键鼠与手机触控</p>
+      </div>
+    </section>
+
+    <section id="end-screen" class="screen">
+      <div class="screen-panel end-panel">
+        <div class="sigil small-sigil" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="eyebrow" id="end-kicker">RUN OVER</div>
+        <h2 id="end-title">挑战结束</h2>
+        <div id="end-stats"></div>
+        <button id="restart-button">再次叩门</button>
+      </div>
+    </section>
+
+    <div id="touch-ui" aria-hidden="true">
+      <div id="stick-zone"><div id="stick-knob"></div></div>
+      <button id="skill-button">技</button>
+      <button id="dash-button">滚</button>
+      <button id="fire-button">射击</button>
+    </div>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

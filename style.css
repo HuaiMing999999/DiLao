@@ -1,0 +1,186 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  background: #0d0c11;
+  color: #f7edcf;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 26%, #2c242a 0, #151117 40%, #080709 100%);
+}
+
+body { touch-action: none; }
+
+#game-shell { position: relative; width: 100%; height: 100%; }
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  image-rendering: pixelated;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-content: center;
+  justify-items: center;
+  padding: 24px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(40, 27, 29, .38), rgba(7, 6, 9, .88) 62%),
+    repeating-linear-gradient(13deg, #0000 0 21px, #ffffff05 22px, #0000 23px 41px);
+  backdrop-filter: blur(5px) saturate(.8);
+  z-index: 5;
+}
+
+.screen.visible { display: grid; }
+
+.screen-panel {
+  position: relative;
+  width: min(880px, calc(100vw - 40px));
+  padding: 44px 46px 28px;
+  border: 2px solid #756052;
+  border-radius: 28px 18px 24px 20px;
+  background:
+    linear-gradient(145deg, #2c2425e8, #171317f2 58%, #21191ce8),
+    repeating-linear-gradient(90deg, #ffffff03 0 1px, #0000 1px 14px);
+  box-shadow: 0 24px 80px #000b, inset 0 0 0 6px #100d10, inset 0 0 50px #0008;
+}
+
+.screen-panel::before,
+.screen-panel::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  top: 16px;
+  background: #c0924e;
+  box-shadow: inset 0 2px 2px #f1ca78, 0 1px 4px #000;
+}
+
+.screen-panel::before { left: 18px; }
+.screen-panel::after { right: 18px; }
+.end-panel { width: min(700px, calc(100vw - 40px)); }
+
+.sigil { position: absolute; left: 50%; top: -31px; width: 78px; height: 62px; transform: translateX(-50%); }
+.sigil::before { content: ""; position: absolute; inset: 8px; border: 3px solid #a64847; border-radius: 50% 50% 46% 54%; background: #261719; box-shadow: 0 0 20px #9d393955; }
+.sigil i { position: absolute; left: 37px; top: 9px; width: 4px; height: 47px; border-radius: 4px; background: #d5aa60; transform-origin: 2px 23px; }
+.sigil i:nth-child(2) { transform: rotate(60deg); }
+.sigil i:nth-child(3) { transform: rotate(-60deg); }
+.small-sigil { transform: translateX(-50%) scale(.78); }
+
+.eyebrow {
+  color: #e7b15a;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+}
+
+h1, h2 {
+  margin: 8px 0 4px;
+  font-family: Georgia, "Songti SC", serif;
+  font-weight: 900;
+  color: #f3dfb5;
+  -webkit-text-stroke: 1px #4a2928;
+  text-shadow: 0 4px 0 #632f34, 0 7px 0 #25171c, 0 14px 28px #000;
+}
+
+h1 { font-size: clamp(48px, 8vw, 92px); letter-spacing: .04em; }
+h2 { font-size: clamp(44px, 8vw, 82px); }
+.subtitle { margin: 6px 0 18px; color: #c9bca4; font-size: clamp(14px, 2vw, 18px); letter-spacing: .04em; }
+
+.hero-select {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+  margin: 0 auto 16px;
+  max-width: 760px;
+}
+
+.hero-card {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 11px 8px 9px;
+  color: #c8bca8;
+  border-color: #5f5049;
+  background: linear-gradient(155deg, #2a2224, #171318);
+  box-shadow: inset 0 1px #3e3538, 0 5px 12px #0006;
+}
+
+.hero-card b { color: #f3dfb5; font-size: 15px; }
+.hero-card small { color: #d59753; font-weight: 900; }
+.hero-card em { color: #8f8377; font-size: 10px; font-style: normal; }
+.hero-card.selected { border-color: #f0bd62; background: linear-gradient(155deg, #51312f, #23171c); transform: translateY(-2px); box-shadow: 0 4px 0 #71382c, 0 10px 24px #0008, inset 0 1px #916153; }
+
+.controls-card {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 680px;
+  margin-bottom: 16px;
+}
+
+.controls-card span, #end-stats span {
+  padding: 10px 14px;
+  border: 1px solid #63534c;
+  border-radius: 9px 6px 8px 7px;
+  background: linear-gradient(#2a2224, #1b171b);
+  color: #bdb2a0;
+  box-shadow: inset 0 1px #3d3538;
+}
+
+.controls-card b { color: #fff2cc; }
+
+button {
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 0;
+  border: 2px solid #f1ca75;
+  border-radius: 10px 7px 9px 8px;
+  padding: 14px 30px;
+  color: #2b1615;
+  background: linear-gradient(#f5cf76, #d99040 62%, #b85c33);
+  box-shadow: 0 5px 0 #71382c, 0 12px 28px #0009, inset 0 2px #fff5bf;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+button:hover { filter: brightness(1.09); transform: translateY(-1px); }
+button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71382c; }
+.small { margin: 20px 0 0; color: #8d8175; font-size: 12px; letter-spacing: .08em; }
+
+#end-stats { display: flex; gap: 8px; margin: 18px 0 26px; flex-wrap: wrap; justify-content: center; }
+
+#touch-ui { display: none; position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+#touch-ui button { pointer-events: auto; position: absolute; padding: 0; color: #fff2d2; background: radial-gradient(circle at 35% 28%, #915451dd, #47272bd9); border: 3px solid #d9aa61bb; box-shadow: inset 0 0 18px #0008, 0 8px 25px #0008; }
+#fire-button { width: 84px; height: 84px; border-radius: 50%; right: 28px; bottom: 32px; }
+#dash-button { width: 58px; height: 58px; border-radius: 50%; right: 124px; bottom: 106px; }
+#skill-button { width: 62px; height: 62px; border-radius: 50%; right: 132px; bottom: 34px; background: radial-gradient(circle at 35% 28%, #75619cdd, #302542dc) !important; }
+#stick-zone { pointer-events: auto; position: absolute; left: 30px; bottom: 32px; width: 118px; height: 118px; border: 3px solid #bfa97477; border-radius: 48% 52% 46% 54%; background: radial-gradient(circle, #2b2529aa, #100d12aa); box-shadow: inset 0 0 28px #0009, 0 8px 30px #0008; }
+#stick-knob { position: absolute; width: 50px; height: 50px; left: 32px; top: 32px; border-radius: 54% 46% 52% 48%; background: radial-gradient(circle at 35% 30%, #d9bd79aa, #806c4c99); border: 3px solid #e4cc91aa; box-shadow: 0 5px 12px #0007; }
+
+@media (pointer: coarse), (max-width: 760px) {
+  #touch-ui.active { display: block; }
+  .controls-card { max-width: 340px; }
+  .controls-card span { font-size: 12px; }
+  .hero-select { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .hero-card { padding: 8px 5px; }
+  .hero-card em { display: none; }
+  h1 { font-size: clamp(48px, 16vw, 78px); }
+  .screen-panel { padding: 36px 14px 20px; border-radius: 18px; }
+}
