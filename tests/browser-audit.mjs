@@ -41,6 +41,14 @@ const evaluate = async expression => {
   return result.result.value;
 };
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
+const waitForGame = async (timeout = 8000) => {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeout) {
+    if (await evaluate("Boolean(window.__game && window.__game.getState)").catch(() => false)) return;
+    await wait(100);
+  }
+  throw new Error("Game runtime did not become ready");
+};
 const screenshot = async name => {
   const result = await call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   await fs.mkdir(".screenshots", { recursive: true });
@@ -50,19 +58,25 @@ const screenshot = async name => {
 await call("Page.enable");
 await call("Runtime.enable");
 await call("Log.enable");
+await call("Page.bringToFront");
 await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
 await call("Page.navigate", { url: auditBaseUrl });
-await wait(350);
+await waitForGame();
 const authorCredit = await evaluate(`({ text: document.querySelector('.author-credit').textContent, visible: getComputedStyle(document.querySelector('.author-credit')).display !== 'none' })`);
 assert(authorCredit.visible && authorCredit.text.includes("彭铭旭") && authorCredit.text.includes("MINOS"), "Start-screen author credit is missing");
 await screenshot("v6-start-author");
 await call("Page.navigate", { url: `${auditBaseUrl}?autostart=1` });
-await wait(900);
+await waitForGame();
+await wait(350);
+await call("Page.bringToFront");
 
 let state = await evaluate("window.__game.getState()");
 assert(state.roomCount === 55, "Campaign room count mismatch");
 assert(Math.abs(state.viewport.scaleX - state.viewport.scaleY) < .001, "Desktop room aspect ratio changed unexpectedly");
-await call("Input.dispatchKeyEvent", { type: "keyDown", code: "KeyI", key: "i" });
+await evaluate("document.querySelector('#game').focus()");
+await call("Input.dispatchMouseEvent", { type: "mousePressed", x: 720, y: 450, button: "left", buttons: 1, clickCount: 1 });
+await call("Input.dispatchMouseEvent", { type: "mouseReleased", x: 720, y: 450, button: "left", buttons: 0, clickCount: 1 });
+await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "KeyI", key: "i", windowsVirtualKeyCode: 73 });
 await call("Input.dispatchKeyEvent", { type: "keyUp", code: "KeyI", key: "i" });
 await wait(120);
 state = await evaluate("window.__game.getState()");
@@ -77,7 +91,7 @@ const pausedAt = await evaluate("window.__game.getState().runStats.damageTaken +
 await wait(300);
 assert(await evaluate("window.__game.getState().runStats.damageTaken + ':' + window.__game.getState().player.x") === pausedAt, "Game did not pause while codex was open");
 await screenshot("v5-item-codex");
-await call("Input.dispatchKeyEvent", { type: "keyDown", code: "Escape", key: "Escape" });
+await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
 await call("Input.dispatchKeyEvent", { type: "keyUp", code: "Escape", key: "Escape" });
 
 await evaluate("window.__game.addSeeds(2); window.__game.unlockBlueprint('seeker'); window.__game.addMaterials({ bone: 8, crystal: 8, sap: 8 }); window.__game.toggleWorkshop(true)");
@@ -104,6 +118,26 @@ state = await evaluate("window.__game.getState()");
 assert(state.playerProjectiles.some(projectile => projectile.weapon === "orbit" && projectile.boomerang), "Orbit boomerang failed");
 await screenshot("v5-crafted-weapons");
 
+await evaluate("window.__game.start(); for (let i = 0; i < 8; i += 1) window.__game.giveItem('shield'); window.__game.goToRoom(4); window.__game.equipWeapon('seeker')");
+await wait(450);
+await call("Page.bringToFront");
+await evaluate("document.querySelector('#game').focus()");
+await call("Input.dispatchMouseEvent", { type: "mousePressed", x: 720, y: 450, button: "left", buttons: 1, clickCount: 1 });
+await call("Input.dispatchMouseEvent", { type: "mouseReleased", x: 720, y: 450, button: "left", buttons: 0, clickCount: 1 });
+const balanceBefore = await evaluate("window.__game.getState()");
+const balanceBossBefore = balanceBefore.enemies.find(enemy => enemy.type.startsWith("boss"));
+await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "KeyD", key: "d", windowsVirtualKeyCode: 68 });
+await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "ArrowRight", key: "ArrowRight", windowsVirtualKeyCode: 39 });
+await wait(4200);
+await call("Input.dispatchKeyEvent", { type: "keyUp", code: "ArrowRight", key: "ArrowRight" });
+await call("Input.dispatchKeyEvent", { type: "keyUp", code: "KeyD", key: "d" });
+const balanceAfter = await evaluate("window.__game.getState()");
+const balanceBossAfter = balanceAfter.enemies.find(enemy => enemy.type.startsWith("boss"));
+assert(balanceBossAfter.hp < balanceBossBefore.hp - 6, "Real sustained fire did not damage the first boss");
+assert(balanceBossAfter.hp > balanceBossAfter.maxHp * 2 / 3, "The first boss phase was skipped too quickly");
+assert(balanceAfter.player.x > balanceBefore.player.x + 45, "Real movement input did not remain responsive during boss fire");
+await screenshot("v8-real-boss-balance");
+
 await evaluate("window.__game.goToRoom(3); window.__game.giveItem('goldCoin')");
 await wait(120);
 state = await evaluate("window.__game.getState()");
@@ -120,22 +154,30 @@ await screenshot("v5-shop-details");
 const bossRooms = [4, 9, 14, 19, 24, 29, 34, 39, 44, 49, 54];
 const bossAudit = [];
 for (const room of bossRooms) {
-  await evaluate(`window.__game.start(); for (let i = 0; i < 30; i += 1) window.__game.giveItem('shield'); window.__game.goToRoom(${room}); window.__game.setBossHealthRatio(${room === 4 ? ".6" : ".3"})`);
-  if (room === 4) {
-    await wait(1500);
-    state = await evaluate("window.__game.getState()");
-    assert(state.bossStage === 2 && state.bossThreat.damage > 1, "Boss stage two presentation failed");
-    await screenshot("v5-boss-4-stage2");
-    await evaluate("window.__game.setBossHealthRatio(.3)");
-  }
-  await wait(2300);
+  await evaluate(`window.__game.start(); window.__game.goToRoom(${room}); window.__game.setPlayerInvincible(120); window.__game.setBossHealthRatio(.6)`);
+  await wait(1750);
   state = await evaluate("window.__game.getState()");
   const bossType = state.enemyTypes.find(type => type.startsWith("boss"));
+  assert(state.bossStage === 2 && state.bossThreat.damage > 1, `Boss room ${room} stage two presentation failed`);
+  await screenshot(`v8-boss-${room}-stage2`);
+  await evaluate("window.__game.setBossHealthRatio(.3)");
+  await wait(2300);
+  state = await evaluate("window.__game.getState()");
   assert(state.bossStage === 3, `Boss room ${room} did not reach stage three`);
-  assert(state.bossThreat.damage >= 1.5 && state.bossThreat.projectileSize > 1.3, `Boss room ${room} stage stats did not escalate`);
+  assert(state.bossThreat.damage >= 1.4 && state.bossThreat.projectileSize > 1.3, `Boss room ${room} stage stats did not escalate`);
   assert(state.bossMechanics[bossType] > 0, `Boss room ${room} behavior did not execute`);
-  bossAudit.push({ room, bossType, hazards: state.hazards, bullets: state.enemyBullets, waves: state.bossWaves, lasers: state.bossLasers });
-  if ([4, 24, 29, 39, 49, 54].includes(room)) await screenshot(`v5-boss-${room}`);
+  const signature = await evaluate("window.__game.triggerBossSignature()");
+  state = await evaluate("window.__game.getState()");
+  const activeBoss = state.enemies.find(enemy => enemy.type === bossType);
+  assert(signature && state.bossSignatures[bossType] > 0 && activeBoss.attackMode, `Boss room ${room} signature attack did not trigger`);
+  await screenshot(`v8-boss-${room}-stage3-signature`);
+  const resolutionCount = state.bossSignatureResolutions[bossType] || 0;
+  await wait((activeBoss.telegraph + .1) * 1000);
+  state = await evaluate("window.__game.getState()");
+  const themedProjectiles = state.enemyProjectiles.filter(projectile => projectile.bossType === bossType);
+  assert(state.bossSignatureResolutions[bossType] === resolutionCount + 1, `Boss room ${room} signature effect did not resolve`);
+  assert(themedProjectiles.every(projectile => projectile.style === state.bossCatalog[bossType].projectile), `Boss room ${room} used another boss projectile style`);
+  bossAudit.push({ room, bossType, signature, projectile: state.bossCatalog[bossType].projectile, effects: themedProjectiles.length, hazards: state.hazards, waves: state.bossWaves, lasers: state.bossLasers });
 }
 
 await evaluate("window.__game.start(); window.__game.goToRoom(44); window.__game.clearRoom()");
@@ -217,5 +259,5 @@ assert(landscapeState.viewport.roomDisplayHeight >= 389, "Mobile landscape arena
 await screenshot("v7-mobile-landscape-arena");
 
 assert(browserErrors.length === 0, `Browser errors: ${browserErrors.join(" | ")}`);
-console.log(JSON.stringify({ authorCredit: "passed", portraitRoomHeight: mobileBefore.viewport.roomDisplayHeight, landscapeArena: `${landscapeState.viewport.roomWidth}x${landscapeState.viewport.roomHeight}`, itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", mobileCrossRoomFire: "passed", browserErrors: browserErrors.length }, null, 2));
+console.log(JSON.stringify({ authorCredit: "passed", portraitRoomHeight: mobileBefore.viewport.roomDisplayHeight, landscapeArena: `${landscapeState.viewport.roomWidth}x${landscapeState.viewport.roomHeight}`, itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", realBossBalance: { damage: balanceBossBefore.hp - balanceBossAfter.hp, movement: balanceAfter.player.x - balanceBefore.player.x }, shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", mobileCrossRoomFire: "passed", browserErrors: browserErrors.length }, null, 2));
 socket.close();

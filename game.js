@@ -74,23 +74,36 @@
     orbit: { name: "血月环刃", icon: "☾", blueprintAt: 5, cost: { bone: 5, crystal: 2, sap: 4 }, detail: "投出弧线双刃，飞出后自动回到持有者身边。" }
   };
   const bossProfiles = {
-    bossCoil: { hp: 88, radius: 42, speed: 98, stages: ["蛇行", "遗蜕", "断节"] },
-    bossHopper: { hp: 104, radius: 43, speed: 88, stages: ["喷涌", "腾跃", "天坠"] },
-    bossDevourer: { hp: 126, radius: 47, speed: 80, stages: ["巡游", "吞噬", "暴食"] },
-    bossIdol: { hp: 148, radius: 48, speed: 0, stages: ["凝视", "育巢", "喷发"] },
-    bossPeep: { hp: 168, radius: 42, speed: 90, stages: ["泪池", "脱眼", "双瞳"] },
-    bossMatron: { hp: 190, radius: 52, speed: 0, stages: ["叩门", "覆掌", "践踏"] },
-    bossHollow: { hp: 210, radius: 40, speed: 128, stages: ["游空", "裂节", "疾返"] },
-    bossHeart: { hp: 236, radius: 50, speed: 76, stages: ["凝视", "心跳", "狂搏"] },
-    bossBloat: { hp: 260, radius: 45, speed: 84, stages: ["腐池", "裂眼", "血光"] },
-    bossBurrow: { hp: 292, radius: 46, speed: 112, stages: ["潜行", "露尾", "掘袭"] },
-    bossInfernal: { hp: 340, radius: 52, speed: 88, stages: ["献祭", "魔像", "双蹄"] }
+    bossCoil: { hp: 124, radius: 42, speed: 98, stages: ["蛇行", "遗蜕", "断节"] },
+    bossHopper: { hp: 148, radius: 43, speed: 88, stages: ["喷涌", "腾跃", "天坠"] },
+    bossDevourer: { hp: 176, radius: 47, speed: 80, stages: ["巡游", "吞噬", "暴食"] },
+    bossIdol: { hp: 208, radius: 48, speed: 0, stages: ["凝视", "育巢", "喷发"] },
+    bossPeep: { hp: 238, radius: 42, speed: 90, stages: ["泪池", "脱眼", "双瞳"] },
+    bossMatron: { hp: 272, radius: 52, speed: 0, stages: ["叩门", "覆掌", "践踏"] },
+    bossHollow: { hp: 306, radius: 40, speed: 128, stages: ["游空", "裂节", "疾返"] },
+    bossHeart: { hp: 348, radius: 50, speed: 76, stages: ["凝视", "心跳", "狂搏"] },
+    bossBloat: { hp: 392, radius: 45, speed: 84, stages: ["腐池", "裂眼", "血光"] },
+    bossBurrow: { hp: 442, radius: 46, speed: 112, stages: ["潜行", "露尾", "掘袭"] },
+    bossInfernal: { hp: 520, radius: 52, speed: 88, stages: ["献祭", "魔像", "双蹄"] }
   };
   const bossStageNames = Object.fromEntries(Object.entries(bossProfiles).map(([id, profile]) => [id, profile.stages]));
+  const bossAttackThemes = {
+    bossCoil: { name: "腐毒骨刺", color: "#9ac65b", core: "#efff9f", trail: "#55783d", shape: "thorn" },
+    bossHopper: { name: "灼热脓雨", color: "#ef8a55", core: "#ffe2a1", trail: "#9d3f35", shape: "drop" },
+    bossDevourer: { name: "饥渊獠牙", color: "#d8b66a", core: "#fff0b5", trail: "#74533b", shape: "fang" },
+    bossIdol: { name: "育巢孢卵", color: "#b28ed4", core: "#f0d4ff", trail: "#63497f", shape: "rune" },
+    bossPeep: { name: "泪池晶滴", color: "#65cde2", core: "#d9fbff", trail: "#39798e", shape: "tear" },
+    bossMatron: { name: "母影血掌", color: "#e36a83", core: "#ffd0d6", trail: "#812c48", shape: "hand" },
+    bossHollow: { name: "空骨残片", color: "#b7a5df", core: "#f3eaff", trail: "#5b4b7b", shape: "bone" },
+    bossHeart: { name: "狂搏血珠", color: "#ff5079", core: "#ffd2df", trail: "#8d2446", shape: "heart" },
+    bossBloat: { name: "裂眼血光", color: "#f15f54", core: "#ffe0ae", trail: "#7e2835", shape: "eye" },
+    bossBurrow: { name: "圣髓砂砾", color: "#81c8a6", core: "#e4ffca", trail: "#3c715e", shape: "shard" },
+    bossInfernal: { name: "鎏金狱火", color: "#f2b94f", core: "#fff3ae", trail: "#8f3b31", shape: "flame" }
+  };
   const bossStageStats = [
     { move: 1, cadence: 1, projectileSpeed: 1, projectileSize: 1, damage: 1, contact: 1 },
-    { move: 1.22, cadence: 1.35, projectileSpeed: 1.24, projectileSize: 1.28, damage: 1.35, contact: 1.3 },
-    { move: 1.5, cadence: 1.75, projectileSpeed: 1.5, projectileSize: 1.48, damage: 1.75, contact: 1.65 }
+    { move: 1.18, cadence: 1.28, projectileSpeed: 1.16, projectileSize: 1.2, damage: 1.2, contact: 1.18 },
+    { move: 1.36, cadence: 1.52, projectileSpeed: 1.3, projectileSize: 1.34, damage: 1.42, contact: 1.38 }
   ];
   const heroes = {
     breaker: { name: "爆破者", path: "摧毁流", tag: "destroy", skill: "爆裂震波", color: "#c75c45", apply: player => { player.damage = 1.25; player.fireRate = .24; player.skillDelay = 8; } },
@@ -628,6 +641,8 @@
       routeChoice: null,
       finalBranch: null,
       bossMechanics: {},
+      bossSignatures: {},
+      bossSignatureResolutions: {},
       roomHit: false,
       synergies: {},
       itemStacks: {},
@@ -807,7 +822,7 @@
       statusTicks: { burn: 0, poison: 0, bleed: 0 }, bossStage: boss ? 1 : 0,
       stageTransition: 0, signatureCooldown: 4.6, waveCooldown: 2.4, hazardCooldown: 2.8, actionTimer: 0,
       moveX: Math.random() < .5 ? -1 : 1, moveY: 0, attackMode: null, telegraph: 0,
-      targetX: 0, targetY: 0, submerged: false, invulnerable: false, orbsSpawned: 0, dead: false
+      targetX: 0, targetY: 0, telegraphTargets: [], signatureName: "", submerged: false, invulnerable: false, orbsSpawned: 0, dead: false
     };
     if (boss && ["bossIdol", "bossMatron", "bossHeart", "bossInfernal"].includes(type)) {
       enemy.x = ROOM_WIDTH / 2 + 80;
@@ -886,6 +901,22 @@
     sound(125, .11, "sawtooth", .018);
   }
 
+  function createBossBullet(enemy, angle, speed, options = {}) {
+    const stageStats = bossStats(enemy);
+    const theme = bossAttackThemes[enemy.type] || bossAttackThemes.bossHeart;
+    const projectileSpeed = speed * stageStats.projectileSpeed * (options.speedScale || 1);
+    game.enemyBullets.push({
+      x: options.x ?? enemy.x, y: options.y ?? enemy.y,
+      previousX: options.x ?? enemy.x, previousY: options.y ?? enemy.y,
+      vx: Math.cos(angle) * projectileSpeed, vy: Math.sin(angle) * projectileSpeed,
+      radius: (options.radius || 5.5) * stageStats.projectileSize,
+      damage: bossDamage(enemy, options.damageScale || 1), stage: enemy.bossStage, life: options.life || 5,
+      ownerId: enemy.id, kind: `${theme.name} · ${enemy.bossStage} 阶`, bossType: enemy.type,
+      style: theme.shape, color: theme.color, coreColor: theme.core, trailColor: theme.trail,
+      curve: options.curve || 0, acceleration: options.acceleration || 0, age: 0
+    });
+  }
+
   function enemyFire(enemy, count = 1, spread = .18) {
     const base = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
     const stageStats = isBoss(enemy) ? bossStats(enemy) : null;
@@ -893,16 +924,15 @@
     enemy.attackFlash = .12;
     for (let index = 0; index < count; index += 1) {
       const angle = base + (index - (count - 1) / 2) * spread;
-      const speed = isBoss(enemy) ? 215 * stageStats.projectileSpeed : 190;
-      game.enemyBullets.push({
+      if (isBoss(enemy)) createBossBullet(enemy, angle, 215, { life: 4 });
+      else game.enemyBullets.push({
         x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y,
-        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-        radius: isBoss(enemy) ? 5.5 * stageStats.projectileSize : 5, life: 4,
-        damage: isBoss(enemy) ? bossDamage(enemy) : 1, stage: enemy.bossStage || 0,
-        ownerId: enemy.id, kind: isBoss(enemy) ? `Boss ${enemy.bossStage} 阶弹幕` : "敌方弹幕"
+        vx: Math.cos(angle) * 190, vy: Math.sin(angle) * 190,
+        radius: 5, life: 4, damage: 1, stage: 0, ownerId: enemy.id, kind: "敌方弹幕"
       });
     }
-    directionalBurst(enemy.x + Math.cos(base) * enemy.radius, enemy.y + Math.sin(base) * enemy.radius, base, "#ff7657", isBoss(enemy) ? 8 : 4, 80);
+    const muzzleColor = isBoss(enemy) ? bossAttackThemes[enemy.type].color : "#ff7657";
+    directionalBurst(enemy.x + Math.cos(base) * enemy.radius, enemy.y + Math.sin(base) * enemy.radius, base, muzzleColor, isBoss(enemy) ? 8 : 4, 80);
   }
 
   function radialFire(enemy, count) {
@@ -911,10 +941,10 @@
     enemy.squash = .34;
     for (let index = 0; index < count; index += 1) {
       const angle = enemy.phase + index / count * TAU;
-      const speed = isBoss(enemy) ? 155 * stageStats.projectileSpeed : 155;
-      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, radius: isBoss(enemy) ? 5.5 * stageStats.projectileSize : 6, damage: isBoss(enemy) ? bossDamage(enemy) : 1, stage: enemy.bossStage || 0, life: 5, ownerId: enemy.id, kind: isBoss(enemy) ? `Boss ${enemy.bossStage} 阶弹幕` : "敌方弹幕" });
+      if (isBoss(enemy)) createBossBullet(enemy, angle, 155);
+      else game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * 155, vy: Math.sin(angle) * 155, radius: 6, damage: 1, stage: 0, life: 5, ownerId: enemy.id, kind: "敌方弹幕" });
     }
-    shockwave(enemy.x, enemy.y, "#e45645", 4);
+    shockwave(enemy.x, enemy.y, isBoss(enemy) ? bossAttackThemes[enemy.type].color : "#e45645", 4);
   }
 
   function radialFireAtSpeed(enemy, count, speed, offset = enemy.phase) {
@@ -923,10 +953,9 @@
     enemy.squash = .34;
     for (let index = 0; index < count; index += 1) {
       const angle = offset + index / count * TAU;
-      const projectileSpeed = speed * stageStats.projectileSpeed;
-      game.enemyBullets.push({ x: enemy.x, y: enemy.y, previousX: enemy.x, previousY: enemy.y, vx: Math.cos(angle) * projectileSpeed, vy: Math.sin(angle) * projectileSpeed, radius: 5.5 * stageStats.projectileSize, damage: bossDamage(enemy), stage: enemy.bossStage, life: 5, ownerId: enemy.id, kind: `Boss ${enemy.bossStage} 阶弹幕` });
+      createBossBullet(enemy, angle, speed);
     }
-    shockwave(enemy.x, enemy.y, "#e45645", 4);
+    shockwave(enemy.x, enemy.y, bossAttackThemes[enemy.type].color, 4);
   }
 
   function roll() {
@@ -1023,9 +1052,17 @@
     }
   }
 
-  function impactBurst(x, y, angle, critical) {
-    const color = critical ? "#fff4a8" : "#f7bc62";
+  function impactBurst(x, y, angle, critical, weapon = "repeater") {
+    const weaponColors = { repeater: "#f7bc62", scatter: "#ff8b55", wisp: "#bfa8ff", cleaver: "#e8dfc7", seeker: "#79f2d0", prism: "#a8e8ff", orbit: "#ff719f" };
+    const color = critical ? "#fff4a8" : weaponColors[weapon] || "#f7bc62";
     directionalBurst(x, y, angle + Math.PI, color, critical ? 12 : 7, critical ? 240 : 165);
+    if (["wisp", "seeker", "prism", "orbit"].includes(weapon)) {
+      game.particles.push({ x, y, vx: 0, vy: 0, life: .28, maxLife: .28, color, size: weapon === "prism" ? 9 : 6, ring: true });
+      for (let index = 0; index < (critical ? 7 : 4); index += 1) {
+        const sparkAngle = angle + index / (critical ? 7 : 4) * TAU;
+        game.particles.push({ x, y, vx: Math.cos(sparkAngle) * 85, vy: Math.sin(sparkAngle) * 85, life: .26, maxLife: .26, color, size: 3.5, star: weapon === "prism", glow: true });
+      }
+    }
     for (let index = 0; index < (critical ? 8 : 4); index += 1) {
       const bloodAngle = angle + random(-1.15, 1.15);
       const velocity = random(45, critical ? 175 : 115);
@@ -1312,13 +1349,15 @@
       bullet.x += bullet.vx * dt;
       bullet.y += bullet.vy * dt;
       bullet.life -= dt;
-      if (bullet.trailCooldown <= 0 && ["seeker", "prism", "orbit"].includes(bullet.weapon)) {
-        bullet.trailCooldown = bullet.weapon === "prism" ? .026 : .045;
+      if (bullet.trailCooldown <= 0) {
+        bullet.trailCooldown = bullet.weapon === "prism" ? .026 : ["seeker", "orbit", "wisp"].includes(bullet.weapon) ? .045 : .075;
+        const trailColors = { repeater: "#f1c773", scatter: "#f28654", wisp: "#bfa8ff", seeker: "#79f2d0", prism: "#a8e8ff", orbit: "#ff719f" };
         game.particles.push({
           x: bullet.x, y: bullet.y, vx: -bullet.vx * .025, vy: -bullet.vy * .025,
-          life: bullet.weapon === "prism" ? .24 : .18, maxLife: bullet.weapon === "prism" ? .24 : .18,
-          color: bullet.weapon === "seeker" ? "#79f2d0" : bullet.weapon === "prism" ? "#a8e8ff" : "#ff719f",
-          size: bullet.weapon === "prism" ? 4.5 : 3.2, star: bullet.weapon === "prism", glow: true
+          life: bullet.weapon === "prism" ? .24 : .16, maxLife: bullet.weapon === "prism" ? .24 : .16,
+          color: trailColors[bullet.weapon] || "#f1c773",
+          size: bullet.weapon === "prism" ? 4.5 : ["seeker", "orbit", "wisp"].includes(bullet.weapon) ? 3.2 : 2.2,
+          star: bullet.weapon === "prism", glow: ["wisp", "seeker", "prism", "orbit"].includes(bullet.weapon)
         });
       }
       for (const enemy of game.enemies) {
@@ -1341,7 +1380,7 @@
           } else bullet.life = 0;
         } else if (bullet.pierce > 0) bullet.pierce -= 1;
         else bullet.life = 0;
-        impactBurst(bullet.x, bullet.y, Math.atan2(bullet.vy, bullet.vx), bullet.critical);
+        impactBurst(bullet.x, bullet.y, Math.atan2(bullet.vy, bullet.vx), bullet.critical, bullet.weapon);
         if (bullet.explosion > 0) {
           const radius = 45 + bullet.explosion * 90;
           for (const target of game.enemies) if (!target.dead && target !== enemy && distance(target, bullet) < radius) damageEnemy(target, bullet.damage * .45, bullet);
@@ -1367,6 +1406,18 @@
     for (const bullet of game.enemyBullets) {
       bullet.previousX = bullet.x;
       bullet.previousY = bullet.y;
+      bullet.age = (bullet.age || 0) + dt;
+      if (bullet.curve) {
+        const speed = Math.hypot(bullet.vx, bullet.vy);
+        const angle = Math.atan2(bullet.vy, bullet.vx) + bullet.curve * dt;
+        bullet.vx = Math.cos(angle) * speed;
+        bullet.vy = Math.sin(angle) * speed;
+      }
+      if (bullet.acceleration) {
+        const acceleration = 1 + bullet.acceleration * dt;
+        bullet.vx *= acceleration;
+        bullet.vy *= acceleration;
+      }
       bullet.x += bullet.vx * dt;
       bullet.y += bullet.vy * dt;
       bullet.life -= dt;
@@ -1398,7 +1449,7 @@
         if (Math.abs(angleDelta(targetAngle, slash.angle)) > slash.arc / 2) continue;
         slash.hitIds.add(enemy.id);
         damageEnemy(enemy, slash.damage, slash);
-        impactBurst(enemy.x, enemy.y, slash.angle, slash.critical);
+        impactBurst(enemy.x, enemy.y, slash.angle, slash.critical, "cleaver");
       }
       for (const bullet of game.enemyBullets) {
         if (bullet.life <= 0 || distance(slash, bullet) > slash.radius) continue;
@@ -1848,21 +1899,42 @@
     enemy.laserOriginY = options.originY ?? enemy.y;
     enemy.laserLength = options.length ?? ARENA_DIAGONAL;
     enemy.laserWidth = options.width ?? 24;
+    enemy.telegraphTargets = options.targets || [];
+    enemy.wallGapY = options.gapY ?? game.player.y;
     enemy.intangible = mode === "jump" || mode.startsWith("burrow");
     if (options.invulnerable !== undefined) enemy.invulnerable = options.invulnerable;
   }
 
   function fireBossLaser(enemy, angle, originX = enemy.x, originY = enemy.y, length = ARENA_DIAGONAL, widthValue = 24) {
-    game.bossLasers.push({ x: originX, y: originY, angle, length, width: widthValue, life: .24, maxLife: .24, stage: enemy.bossStage, kind: "灼热光束" });
+    const theme = bossAttackThemes[enemy.type];
+    game.bossLasers.push({ x: originX, y: originY, angle, length, width: widthValue, life: .24, maxLife: .24, stage: enemy.bossStage, kind: `${theme.name}光束`, bossType: enemy.type, color: theme.color, coreColor: theme.core });
     const dx = game.player.x - originX;
     const dy = game.player.y - originY;
     const along = dx * Math.cos(angle) + dy * Math.sin(angle);
     const across = Math.abs(dx * Math.sin(angle) - dy * Math.cos(angle));
-    if (along > 0 && along < length && across < widthValue / 2 + game.player.radius) damagePlayer(bossDamage(enemy), { x: originX, y: originY, kind: `Boss ${enemy.bossStage} 阶光束` });
+    if (along > 0 && along < length && across < widthValue / 2 + game.player.radius) damagePlayer(bossDamage(enemy), { x: originX, y: originY, kind: `${theme.name} · ${enemy.bossStage} 阶光束` });
+  }
+
+  function resolveTargetedImpacts(enemy, targets, damageScale = 1.25, color = bossAttackThemes[enemy.type].color) {
+    for (const target of targets) {
+      const radius = target.radius || enemy.telegraphRadius;
+      if (Math.hypot(game.player.x - target.x, game.player.y - target.y) < radius + game.player.radius) damagePlayer(bossDamage(enemy, damageScale), { x: target.x, y: target.y, kind: `${enemy.signatureName || "重击"} · 落点` });
+      shockwave(target.x, target.y, color, 18);
+      for (let index = 0; index < 6; index += 1) createBossBullet(enemy, index / 6 * TAU, 135, { x: target.x, y: target.y, radius: 4.5, damageScale: .72, life: 3.2 });
+    }
+    screenShake = Math.max(screenShake, 15);
   }
 
   function resolveBossTelegraph(enemy, dt) {
     if (enemy.telegraph <= 0) return false;
+    if (enemy.attackMode === "suction") {
+      const deltaX = enemy.x - game.player.x;
+      const deltaY = enemy.y - game.player.y;
+      const pullDistance = Math.hypot(deltaX, deltaY) || 1;
+      const pull = Math.max(0, 1 - pullDistance / 320) * (enemy.bossStage === 3 ? 145 : 105) * dt;
+      game.player.x += deltaX / pullDistance * pull;
+      game.player.y += deltaY / pullDistance * pull;
+    }
     enemy.telegraph -= dt;
     if (enemy.telegraph > 0) return true;
     const mode = enemy.attackMode;
@@ -1881,6 +1953,47 @@
       for (const direction of enemy.laserDirections) fireBossLaser(enemy, direction, enemy.laserOriginX, enemy.laserOriginY, enemy.laserLength, enemy.laserWidth);
       directionalBurst(enemy.laserOriginX, enemy.laserOriginY, enemy.laserDirections[0] || 0, "#ff735b", 18, 180);
       screenShake = 9;
+    } else if (mode === "coilCross") {
+      for (let index = 0; index < 16; index += 1) createBossBullet(enemy, index / 16 * TAU, index % 2 ? 180 : 125, { curve: index % 2 ? .48 : -.48, radius: 5 });
+      for (const angle of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) addBossHazard(enemy.x + Math.cos(angle) * 82, enemy.y + Math.sin(angle) * 82, 27, 4.5, "蜕皮毒囊");
+      shockwave(enemy.x, enemy.y, bossAttackThemes[enemy.type].color, 24);
+    } else if (mode === "skyfall") {
+      resolveTargetedImpacts(enemy, enemy.telegraphTargets, 1.18);
+      const landing = enemy.telegraphTargets.at(-1);
+      if (landing) { enemy.x = landing.x; enemy.y = landing.y; }
+    } else if (mode === "suction") {
+      for (let index = 0; index < 18; index += 1) createBossBullet(enemy, index / 18 * TAU, 115 + index % 3 * 34, { curve: index % 2 ? .34 : -.34, acceleration: .14, radius: 5 });
+      shockwave(enemy.x, enemy.y, bossAttackThemes[enemy.type].color, 30);
+    } else if (mode === "idolSpiral") {
+      for (let index = 0; index < 20; index += 1) createBossBullet(enemy, index / 20 * TAU, 145 + index % 2 * 42, { curve: index % 2 ? .62 : -.62, life: 5.8 });
+      if (game.enemies.filter(candidate => candidate.summonedBy === enemy.id && !candidate.dead).length < 3) spawnOwnedEnemy(enemy.bossStage === 3 ? "cultist" : "bat", enemy, 0, 58);
+    } else if (mode === "eyeCross") {
+      const eyes = game.hazards.filter(hazard => hazard.ownerId === enemy.id && hazard.kind === "游荡眼球");
+      const origins = eyes.length ? eyes : [{ x: enemy.x, y: enemy.y }];
+      for (const origin of origins) for (let index = 0; index < 4; index += 1) createBossBullet(enemy, index * Math.PI / 2 + enemy.phase, 230, { x: origin.x, y: origin.y, acceleration: .08 });
+      radialFireAtSpeed(enemy, enemy.bossStage === 3 ? 12 : 8, 150, enemy.phase + Math.PI / 8);
+    } else if (mode === "handClamp") {
+      fireBossLaser(enemy, 0, WALL, enemy.targetY, ROOM_WIDTH - WALL * 2, enemy.laserWidth);
+      fireBossLaser(enemy, Math.PI, ROOM_WIDTH - WALL, enemy.targetY, ROOM_WIDTH - WALL * 2, enemy.laserWidth);
+      resolveTargetedImpacts(enemy, [{ x: game.player.x, y: enemy.targetY, radius: 44 }], 1.1);
+    } else if (mode === "echoLanes") {
+      for (const direction of [Math.PI / 4, Math.PI * .75, Math.PI * 1.25, Math.PI * 1.75]) fireBossLaser(enemy, direction, enemy.x, enemy.y, ARENA_DIAGONAL, enemy.laserWidth);
+      radialFireAtSpeed(enemy, 12, 175, enemy.phase);
+    } else if (mode === "heartWall") {
+      const lanes = 9;
+      for (let lane = 0; lane < lanes; lane += 1) {
+        const y = WALL + 48 + lane / (lanes - 1) * (ROOM_HEIGHT - WALL * 2 - 96);
+        if (Math.abs(y - enemy.wallGapY) < 78) continue;
+        const fromLeft = lane % 2 === 0;
+        createBossBullet(enemy, fromLeft ? 0 : Math.PI, 190, { x: fromLeft ? WALL + 8 : ROOM_WIDTH - WALL - 8, y, radius: 7, life: 6, acceleration: .08 });
+      }
+    } else if (mode === "burrowChain") {
+      resolveTargetedImpacts(enemy, enemy.telegraphTargets, 1.12, bossAttackThemes[enemy.type].color);
+      const weakPoint = enemy.telegraphTargets.at(-1);
+      if (weakPoint) { enemy.x = weakPoint.x; enemy.y = weakPoint.y; enemy.submerged = false; enemy.invulnerable = false; enemy.actionTimer = 1.6; }
+    } else if (mode === "hoofStorm") {
+      resolveTargetedImpacts(enemy, enemy.telegraphTargets, 1.22, bossAttackThemes[enemy.type].color);
+      radialFireAtSpeed(enemy, 16, 145, enemy.phase);
     } else if (mode === "burrowHead") {
       enemy.x = clamp(enemy.targetX, WALL + enemy.radius, ROOM_WIDTH - WALL - enemy.radius);
       enemy.y = clamp(enemy.targetY, WALL + enemy.radius, ROOM_HEIGHT - WALL - enemy.radius);
@@ -1899,6 +2012,11 @@
       enemyFire(enemy, 3, .28);
       game.texts.push({ text: "尾部弱点暴露！", x: enemy.x, y: enemy.y - 58, life: 1.1, color: "#9ee7c1", size: 15 });
     }
+    if (enemy.signatureName) {
+      game.bossSignatureResolutions[enemy.type] = (game.bossSignatureResolutions[enemy.type] || 0) + 1;
+      enemy.signatureName = "";
+    }
+    enemy.telegraphTargets = [];
     enemy.attackMode = null;
     enemy.intangible = false;
     return true;
@@ -1928,18 +2046,36 @@
     if (enemy.bossStage < 2 || enemy.telegraph > 0 || enemy.attackMode) return;
     enemy.signatureCooldown -= dt;
     if (enemy.signatureCooldown > 0) return;
-    if (enemy.bossStage === 2) {
-      radialFireAtSpeed(enemy, 12, 155, enemy.phase + Math.PI / 12);
-      enemyFire(enemy, 5, .2);
-      enemy.signatureCooldown = 3.6;
-      game.texts.push({ text: `${bossStageNames[enemy.type][1]} · 变异弹幕`, x: enemy.x, y: enemy.y - enemy.radius - 30, life: .9, color: "#8cebd8", size: 13 });
-    } else {
-      radialFireAtSpeed(enemy, 16, 165, enemy.phase);
-      radialFireAtSpeed(enemy, 10, 235, enemy.phase + Math.PI / 10);
-      addBossHazard(clamp(game.player.x + random(-55, 55), WALL + 45, ROOM_WIDTH - WALL - 45), clamp(game.player.y + random(-55, 55), WALL + 45, ROOM_HEIGHT - WALL - 45), 34, 2.8, "狂怒裂隙");
-      enemy.signatureCooldown = 2.25;
-      game.texts.push({ text: `${bossStageNames[enemy.type][2]} · 狂怒齐射`, x: enemy.x, y: enemy.y - enemy.radius - 34, life: 1, color: "#ff7898", size: 14 });
-    }
+    const stageThree = enemy.bossStage === 3;
+    const player = game.player;
+    const targetsAroundPlayer = offsets => offsets.map(([x, y, radius]) => ({ x: clamp(player.x + x, WALL + 54, ROOM_WIDTH - WALL - 54), y: clamp(player.y + y, WALL + 54, ROOM_HEIGHT - WALL - 54), radius }));
+    const signatures = {
+      bossCoil: () => startBossTelegraph(enemy, "coilCross", stageThree ? .5 : .72, { radius: 105 }),
+      bossHopper: () => startBossTelegraph(enemy, "skyfall", stageThree ? .58 : .78, { targets: targetsAroundPlayer(stageThree ? [[-86, -45, 54], [76, -18, 58], [-34, 72, 62], [35, 12, 66]] : [[-64, -28, 52], [60, 20, 56], [0, 64, 60]]) }),
+      bossDevourer: () => startBossTelegraph(enemy, "suction", stageThree ? .72 : .92, { radius: stageThree ? 225 : 190 }),
+      bossIdol: () => startBossTelegraph(enemy, "idolSpiral", stageThree ? .48 : .7, { radius: 130 }),
+      bossPeep: () => startBossTelegraph(enemy, "eyeCross", stageThree ? .5 : .68, { radius: 118 }),
+      bossMatron: () => startBossTelegraph(enemy, "handClamp", stageThree ? .6 : .82, { targetY: player.y, width: stageThree ? 64 : 50 }),
+      bossHollow: () => startBossTelegraph(enemy, "echoLanes", stageThree ? .48 : .7, { width: stageThree ? 27 : 20 }),
+      bossHeart: () => startBossTelegraph(enemy, "heartWall", stageThree ? .62 : .84, { gapY: player.y }),
+      bossBloat: () => {
+        const aim = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        startBossTelegraph(enemy, "laser", stageThree ? .58 : .78, { directions: [aim - .56, aim, aim + .56], width: stageThree ? 31 : 24 });
+      },
+      bossBurrow: () => startBossTelegraph(enemy, "burrowChain", stageThree ? .58 : .8, { targets: targetsAroundPlayer(stageThree ? [[-92, 0, 52], [-32, -54, 54], [38, 26, 58], [88, -12, 60]] : [[-62, -18, 50], [5, 38, 54], [65, -10, 56]]), invulnerable: true }),
+      bossInfernal: () => startBossTelegraph(enemy, "hoofStorm", stageThree ? .58 : .82, { targets: targetsAroundPlayer(stageThree ? [[-92, -58, 56], [88, -52, 56], [-76, 58, 60], [78, 62, 60], [0, 0, 66]] : [[-72, -46, 54], [68, -38, 54], [0, 58, 60]]) })
+    };
+    const signatureNames = {
+      bossCoil: "断节毒轮", bossHopper: "多重天坠", bossDevourer: "暴食吸积", bossIdol: "育巢螺旋", bossPeep: "双瞳十字",
+      bossMatron: "母影夹击", bossHollow: "空骨回返", bossHeart: "狂搏血墙", bossBloat: "裂眼三光", bossBurrow: "连环掘袭", bossInfernal: "双蹄审判"
+    };
+    enemy.signatureName = signatureNames[enemy.type];
+    game.bossSignatures[enemy.type] = (game.bossSignatures[enemy.type] || 0) + 1;
+    signatures[enemy.type]();
+    enemy.signatureCooldown = stageThree ? 3.15 : 4.45;
+    const theme = bossAttackThemes[enemy.type];
+    game.texts.push({ text: `${enemy.signatureName} · 注意预警`, x: ROOM_WIDTH / 2, y: 124, life: 1.15, color: theme.core, size: stageThree ? 18 : 16 });
+    sound(stageThree ? 74 : 106, .24, "sawtooth", .024);
   }
 
   function turnCardinal(enemy) {
@@ -2573,7 +2709,7 @@
       const alpha = clamp(laser.life / laser.maxLife, 0, 1);
       const endX = laser.x + Math.cos(laser.angle) * laser.length;
       const endY = laser.y + Math.sin(laser.angle) * laser.length;
-      const laserColor = laser.stage === 3 ? "#ff397d" : laser.stage === 2 ? "#f06b5c" : "#f02e45";
+      const laserColor = laser.color || (laser.stage === 3 ? "#ff397d" : laser.stage === 2 ? "#f06b5c" : "#f02e45");
       context.save();
       context.lineCap = "round";
       context.strokeStyle = `rgba(126, 16, 30, ${.68 * alpha})`;
@@ -2581,7 +2717,8 @@
       context.shadowBlur = laser.stage === 3 ? 30 : 22;
       context.lineWidth = laser.width;
       context.beginPath(); context.moveTo(laser.x, laser.y); context.lineTo(endX, endY); context.stroke();
-      context.strokeStyle = laser.stage === 3 ? `rgba(255, 210, 229, ${.95 * alpha})` : `rgba(255, 190, 142, ${.9 * alpha})`;
+      context.strokeStyle = laser.coreColor || (laser.stage === 3 ? `rgba(255, 210, 229, ${.95 * alpha})` : `rgba(255, 190, 142, ${.9 * alpha})`);
+      context.globalAlpha = .92 * alpha;
       context.lineWidth = Math.max(3, laser.width * .22);
       context.beginPath(); context.moveTo(laser.x, laser.y); context.lineTo(endX, endY); context.stroke();
       context.restore();
@@ -2816,6 +2953,76 @@
     }
   }
 
+  function drawHeroBackpiece(player, hero) {
+    context.save();
+    context.strokeStyle = "#21181d";
+    context.lineWidth = 4;
+    if (player.hero === "breaker") {
+      context.fillStyle = "#3d2b29";
+      roundedRect(-24, -4, 17, 30, 6); context.fill(); context.stroke();
+      context.fillStyle = "#b9583f";
+      for (const y of [2, 11, 20]) { context.beginPath(); context.arc(-23, y, 4, 0, TAU); context.fill(); }
+      context.fillStyle = "#755044";
+      context.beginPath(); context.moveTo(-18, -4); context.lineTo(-28, -18); context.lineTo(-7, -12); context.closePath(); context.fill(); context.stroke();
+    } else if (player.hero === "gambler") {
+      context.fillStyle = "#463822";
+      context.beginPath(); context.moveTo(-15, 10); context.lineTo(-25, 30); context.lineTo(-3, 21); context.lineTo(3, 31); context.lineTo(16, 11); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#d9ad52";
+      context.beginPath(); context.arc(-18, 9, 8, 0, TAU); context.fill(); context.stroke();
+      context.fillStyle = "#5a361f"; context.beginPath(); context.arc(-18, 9, 3, 0, TAU); context.fill();
+    } else if (player.hero === "seer") {
+      context.fillStyle = "#352847";
+      context.beginPath(); context.moveTo(-14, -12); context.quadraticCurveTo(-31, 7, -21, 29); context.lineTo(0, 21); context.lineTo(19, 29); context.quadraticCurveTo(29, 6, 14, -13); context.closePath(); context.fill(); context.stroke();
+      context.strokeStyle = "#9a7dcb"; context.lineWidth = 2;
+      for (const side of [-1, 1]) { context.beginPath(); context.arc(side * 21, -4, 8, 0, TAU); context.stroke(); }
+    } else {
+      context.fillStyle = "#314d46";
+      for (const side of [-1, 1]) {
+        context.beginPath(); context.moveTo(side * 9, -6); context.lineTo(side * 29, -14); context.lineTo(side * 32, 9); context.lineTo(side * 15, 14); context.closePath(); context.fill(); context.stroke();
+        context.strokeStyle = "#73977e"; context.lineWidth = 3; context.beginPath(); context.moveTo(side * 17, -8); context.lineTo(side * 25, 8); context.stroke();
+      }
+    }
+    context.restore();
+  }
+
+  function drawHeroIdentity(player, hero) {
+    context.save();
+    context.strokeStyle = "#24191e";
+    context.lineWidth = 3;
+    if (player.hero === "breaker") {
+      context.fillStyle = "#4b3430";
+      context.beginPath(); context.moveTo(-15, -19); context.lineTo(10, -25); context.lineTo(19, -10); context.lineTo(13, 3); context.lineTo(-3, 0); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#e26c4c";
+      context.fillRect(-11, -16, 18, 3);
+      context.fillStyle = "#191318";
+      for (const y of [-6, 0]) context.fillRect(4, y, 10, 2);
+      context.strokeStyle = "#f19a54"; context.beginPath(); context.moveTo(-8, -24); context.quadraticCurveTo(-3, -36, 5, -38); context.stroke();
+    } else if (player.hero === "gambler") {
+      context.fillStyle = "#3c2d21";
+      context.beginPath(); context.ellipse(0, -23, 25, 7, -.08, 0, TAU); context.fill(); context.stroke();
+      context.fillStyle = "#7b5c2e";
+      context.beginPath(); context.moveTo(-14, -24); context.lineTo(-9, -39); context.lineTo(10, -37); context.lineTo(15, -23); context.closePath(); context.fill(); context.stroke();
+      context.strokeStyle = "#e6bd62"; context.lineWidth = 2; context.beginPath(); context.arc(10, -12, 8, 0, TAU); context.stroke();
+      context.beginPath(); context.moveTo(17, -8); context.lineTo(22, 0); context.stroke();
+      context.fillStyle = "#ffe994"; context.beginPath(); context.arc(10, -12, 2.5, 0, TAU); context.fill();
+    } else if (player.hero === "seer") {
+      context.fillStyle = "#3c2d52";
+      context.beginPath(); context.moveTo(-18, -5); context.quadraticCurveTo(-22, -31, 0, -40); context.quadraticCurveTo(22, -30, 20, -5); context.lineTo(12, -18); context.lineTo(-10, -18); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#1c1524"; roundedRect(-12, -17, 26, 8, 3); context.fill();
+      context.fillStyle = "#d8c0ff"; context.shadowColor = "#a476e5"; context.shadowBlur = 12;
+      context.beginPath(); context.ellipse(1, -24, 6, 4, 0, 0, TAU); context.fill();
+      context.fillStyle = "#472b68"; context.beginPath(); context.arc(2, -24, 2, 0, TAU); context.fill(); context.shadowBlur = 0;
+    } else {
+      context.fillStyle = "#263b37";
+      context.beginPath(); context.arc(1, -11, 23, 0, TAU); context.fill(); context.stroke();
+      context.strokeStyle = "#789b83"; context.lineWidth = 4;
+      for (let bar = -2; bar <= 2; bar += 1) { context.beginPath(); context.moveTo(bar * 8, -31); context.lineTo(bar * 7, 5); context.stroke(); }
+      context.beginPath(); context.arc(0, -14, 24, Math.PI, TAU); context.stroke();
+      context.fillStyle = "#b8d0ae"; context.beginPath(); context.arc(8, -13, 4, 0, TAU); context.fill();
+    }
+    context.restore();
+  }
+
   function drawPlayer() {
     const player = game.player;
     const hero = heroes[player.hero];
@@ -2834,9 +3041,10 @@
     }
     if (player.invincible > 0 && Math.floor(player.invincible * 14) % 2 === 0) context.globalAlpha = .35;
     context.rotate(bodyAngle + rollRotation);
-    context.scale(1.08 * (1 + player.squash * .14), 1.08 * (1 - player.squash * .11));
+    context.scale(1.2 * (1 + player.squash * .14), 1.2 * (1 - player.squash * .11));
     context.fillStyle = "#100d11aa";
     context.beginPath(); context.ellipse(-3, 19, 24, 9, 0, 0, TAU); context.fill();
+    drawHeroBackpiece(player, hero);
     drawLimb(-8, 11, -12 + stride, 20, 7, "#ceb58f");
     drawLimb(3, 12, 7 - stride, 20, 7, "#ceb58f");
     context.fillStyle = player.hero === "breaker" ? "#6d3b35" : player.hero === "gambler" ? "#6b5730" : player.hero === "seer" ? "#4c3d66" : "#315f55";
@@ -2879,19 +3087,7 @@
     context.globalAlpha = 1;
     context.fillStyle = "#321e24";
     context.beginPath(); context.ellipse(17, -7, 4, 5, 0, 0, TAU); context.fill();
-    if (player.hero === "breaker") {
-      context.fillStyle = "#2c2022";
-      context.beginPath(); context.arc(-7, -27, 7, 0, TAU); context.fill();
-      context.strokeStyle = "#db6b4a"; context.lineWidth = 2; context.beginPath(); context.moveTo(-3, -31); context.lineTo(5, -36); context.stroke();
-    } else if (player.hero === "gambler") {
-      context.fillStyle = "#d6a94d"; context.beginPath(); context.arc(-7, -27, 7, 0, TAU); context.fill();
-      context.fillStyle = "#fff0a5"; context.beginPath(); context.arc(-9, -29, 2, 0, TAU); context.fill();
-    } else if (player.hero === "seer") {
-      context.strokeStyle = "#bca4ea"; context.lineWidth = 3; context.beginPath(); context.arc(1, -29, 11, Math.PI, TAU); context.stroke();
-      context.fillStyle = "#bca4ea"; context.beginPath(); context.arc(2, -30, 2, 0, TAU); context.fill();
-    } else {
-      context.strokeStyle = "#779e82"; context.lineWidth = 4; context.beginPath(); context.moveTo(-16, -16); context.lineTo(-22, -27); context.moveTo(16, -17); context.lineTo(22, -28); context.stroke();
-    }
+    drawHeroIdentity(player, hero);
     if (player.rage > 0) {
       context.strokeStyle = hero.color; context.lineWidth = 3; context.globalAlpha = .5 + Math.sin(game.elapsed * 14) * .25;
       context.beginPath(); context.arc(0, -2, 34, 0, TAU); context.stroke(); context.globalAlpha = 1;
@@ -2982,6 +3178,33 @@
     context.restore();
   }
 
+  function drawEnemyRoleSilhouette(enemy) {
+    context.save();
+    context.strokeStyle = "#21171c";
+    context.lineWidth = 4;
+    if (enemy.type === "grunt") {
+      context.fillStyle = "#633137";
+      context.beginPath(); context.moveTo(-16, -8); context.lineTo(-28, -22); context.lineTo(-22, 1); context.closePath(); context.fill(); context.stroke();
+    } else if (enemy.type === "turret") {
+      context.fillStyle = "#4e392d";
+      for (let leg = 0; leg < 3; leg += 1) { const angle = leg / 3 * TAU; context.beginPath(); context.moveTo(Math.cos(angle) * 13, Math.sin(angle) * 13); context.lineTo(Math.cos(angle - .18) * 31, Math.sin(angle - .18) * 31); context.lineTo(Math.cos(angle + .18) * 31, Math.sin(angle + .18) * 31); context.closePath(); context.fill(); context.stroke(); }
+    } else if (enemy.type === "charger") {
+      context.fillStyle = "#50462d";
+      context.beginPath(); context.moveTo(10, -13); context.lineTo(34, 0); context.lineTo(10, 13); context.closePath(); context.fill(); context.stroke();
+    } else if (enemy.type === "splitter") {
+      context.fillStyle = "#506b47";
+      for (let pod = 0; pod < 3; pod += 1) { const angle = pod / 3 * TAU + enemy.phase * .1; context.beginPath(); context.arc(Math.cos(angle) * 20, Math.sin(angle) * 20, 9, 0, TAU); context.fill(); context.stroke(); }
+    } else if (enemy.type === "cultist") {
+      context.fillStyle = "#342443";
+      context.beginPath(); context.moveTo(-17, 13); context.lineTo(-27, 31); context.lineTo(-3, 21); context.lineTo(5, 31); context.lineTo(18, 12); context.closePath(); context.fill(); context.stroke();
+    } else if (enemy.type === "bomber") {
+      context.fillStyle = "#35272a";
+      context.beginPath(); context.arc(-18, 2, 15, 0, TAU); context.fill(); context.stroke();
+      context.strokeStyle = "#d16b45"; context.beginPath(); context.moveTo(-23, -9); context.quadraticCurveTo(-34, -22, -22, -29); context.stroke();
+    }
+    context.restore();
+  }
+
   function drawEnemies() {
     for (const enemy of game.enemies) {
       context.save();
@@ -3012,6 +3235,10 @@
       }
       context.fillStyle = "#100c10aa";
       context.beginPath(); context.ellipse(-2, enemy.radius * .9, enemy.radius * 1.25, enemy.radius * .48, 0, 0, TAU); context.fill();
+      if (!isBoss(enemy)) {
+        context.scale(1.12, 1.12);
+        drawEnemyRoleSilhouette(enemy);
+      }
       if (enemy.type === "grunt") drawGrunt(enemy);
       else if (enemy.type === "turret") drawTurret(enemy);
       else if (enemy.type === "charger") drawCharger(enemy);
@@ -3395,6 +3622,7 @@
     context.restore();
     context.save();
     context.rotate(-enemy.angle);
+    drawBossPhaseIdentity(enemy);
     drawBossMutation(enemy);
     context.restore();
   }
@@ -3402,7 +3630,8 @@
   function drawBossStageAura(enemy) {
     if (enemy.bossStage < 2) return;
     const stageThree = enemy.bossStage === 3;
-    const color = stageThree ? "#ff527d" : "#75e1d0";
+    const theme = bossAttackThemes[enemy.type];
+    const color = theme.color;
     context.save();
     context.globalAlpha = .5 + Math.sin(game.elapsed * (stageThree ? 9 : 5) + enemy.id) * .15;
     context.strokeStyle = color;
@@ -3432,11 +3661,92 @@
     context.restore();
   }
 
+  function drawBossPhaseIdentity(enemy) {
+    if (enemy.bossStage < 2) return;
+    const stageThree = enemy.bossStage === 3;
+    const theme = bossAttackThemes[enemy.type];
+    const pulse = 1 + Math.sin(game.elapsed * (stageThree ? 8 : 5) + enemy.id) * .08;
+    context.save();
+    context.scale(pulse, pulse);
+    context.strokeStyle = theme.trail;
+    context.fillStyle = theme.color;
+    context.lineWidth = stageThree ? 4 : 3;
+    context.shadowColor = theme.color;
+    context.shadowBlur = stageThree ? 16 : 8;
+    if (enemy.type === "bossCoil") {
+      const sacs = stageThree ? 6 : 3;
+      for (let index = 0; index < sacs; index += 1) {
+        const angle = Math.PI * .7 + index / Math.max(1, sacs - 1) * Math.PI * .6;
+        context.beginPath(); context.ellipse(Math.cos(angle) * (enemy.radius + 10), Math.sin(angle) * (enemy.radius + 5), stageThree ? 8 : 6, stageThree ? 12 : 9, angle, 0, TAU); context.fill(); context.stroke();
+      }
+    } else if (enemy.type === "bossHopper") {
+      for (const side of [-1, 1]) {
+        context.beginPath(); context.moveTo(side * 20, 19); context.lineTo(side * (stageThree ? 52 : 42), 34); context.lineTo(side * 29, 43); context.stroke();
+        context.beginPath(); context.moveTo(side * 16, -20); context.lineTo(side * (stageThree ? 32 : 27), -42); context.lineTo(side * 6, -29); context.closePath(); context.fill(); context.stroke();
+      }
+    } else if (enemy.type === "bossDevourer") {
+      for (const side of [-1, 1]) {
+        context.beginPath(); context.moveTo(24, side * 9); context.lineTo(stageThree ? 66 : 55, side * 22); context.lineTo(38, side * 3); context.closePath(); context.fill(); context.stroke();
+      }
+      if (stageThree) for (let tooth = -2; tooth <= 2; tooth += 1) { context.beginPath(); context.moveTo(38, tooth * 8); context.lineTo(54, tooth * 6); context.lineTo(39, tooth * 8 + 5); context.closePath(); context.fill(); }
+    } else if (enemy.type === "bossIdol") {
+      const eggs = stageThree ? 7 : 4;
+      for (let index = 0; index < eggs; index += 1) {
+        const angle = game.elapsed * (stageThree ? 1.2 : .6) + index / eggs * TAU;
+        const radius = enemy.radius + (stageThree ? 38 : 27);
+        context.beginPath(); context.ellipse(Math.cos(angle) * radius, Math.sin(angle) * radius, 8, 11, angle, 0, TAU); context.fill(); context.stroke();
+      }
+    } else if (enemy.type === "bossPeep") {
+      const eyes = stageThree ? 4 : 2;
+      for (let index = 0; index < eyes; index += 1) {
+        const angle = game.elapsed * (index % 2 ? -.9 : .9) + index / eyes * TAU;
+        const radius = enemy.radius + 30;
+        context.beginPath(); context.ellipse(Math.cos(angle) * radius, Math.sin(angle) * radius, 13, 9, angle, 0, TAU); context.fill(); context.stroke();
+        context.fillStyle = theme.core; context.beginPath(); context.arc(Math.cos(angle) * radius + Math.cos(angle) * 3, Math.sin(angle) * radius + Math.sin(angle) * 3, 3, 0, TAU); context.fill(); context.fillStyle = theme.color;
+      }
+    } else if (enemy.type === "bossMatron") {
+      for (const side of [-1, 1]) {
+        context.beginPath(); context.ellipse(side * (stageThree ? 71 : 58), 5, stageThree ? 22 : 18, stageThree ? 31 : 25, side * .16, 0, TAU); context.fill(); context.stroke();
+        for (let finger = -2; finger <= 2; finger += 1) { context.beginPath(); context.moveTo(side * (stageThree ? 75 : 61), finger * 7); context.lineTo(side * (stageThree ? 96 : 80), finger * 9); context.stroke(); }
+      }
+    } else if (enemy.type === "bossHollow") {
+      context.globalAlpha = .42;
+      for (let echo = 1; echo <= (stageThree ? 4 : 2); echo += 1) {
+        context.beginPath(); context.ellipse(-echo * 31, Math.sin(game.elapsed * 6 + echo) * 13, 25 - echo * 2, 16 - echo, 0, 0, TAU); context.fill(); context.stroke();
+      }
+      context.globalAlpha = 1;
+    } else if (enemy.type === "bossHeart") {
+      const veins = stageThree ? 8 : 5;
+      for (let index = 0; index < veins; index += 1) {
+        const angle = index / veins * TAU;
+        context.beginPath(); context.moveTo(Math.cos(angle) * 30, Math.sin(angle) * 30); context.bezierCurveTo(Math.cos(angle + .35) * 50, Math.sin(angle + .35) * 50, Math.cos(angle - .2) * 64, Math.sin(angle - .2) * 64, Math.cos(angle) * 78, Math.sin(angle) * 78); context.stroke();
+      }
+    } else if (enemy.type === "bossBloat") {
+      for (const side of [-1, 1]) {
+        context.beginPath(); context.ellipse(side * (stageThree ? 59 : 49), -18, 17, 12, side * .15, 0, TAU); context.fill(); context.stroke();
+        context.fillStyle = theme.core; context.beginPath(); context.arc(side * (stageThree ? 62 : 52), -18, 5, 0, TAU); context.fill(); context.fillStyle = theme.color;
+      }
+    } else if (enemy.type === "bossBurrow") {
+      const plates = stageThree ? 7 : 4;
+      for (let index = 0; index < plates; index += 1) {
+        const x = -enemy.radius - index * 15;
+        context.beginPath(); context.moveTo(x - 10, 0); context.lineTo(x, -24 - index % 2 * 7); context.lineTo(x + 10, 0); context.closePath(); context.fill(); context.stroke();
+      }
+    } else if (enemy.type === "bossInfernal") {
+      for (const side of [-1, 1]) {
+        context.beginPath(); context.moveTo(side * 24, -24); context.quadraticCurveTo(side * (stageThree ? 72 : 58), -65, side * (stageThree ? 47 : 39), -4); context.quadraticCurveTo(side * 37, -25, side * 20, -12); context.fill(); context.stroke();
+        if (stageThree) { context.beginPath(); context.moveTo(side * 25, 25); context.lineTo(side * 56, 49); context.lineTo(side * 18, 47); context.closePath(); context.fill(); context.stroke(); }
+      }
+    }
+    context.restore();
+  }
+
   function drawBossMutation(enemy) {
     if (enemy.bossStage < 2) return;
     const stageThree = enemy.bossStage === 3;
-    context.strokeStyle = stageThree ? "#471728" : "#25443f";
-    context.fillStyle = stageThree ? "#c84a68" : "#69a99a";
+    const theme = bossAttackThemes[enemy.type];
+    context.strokeStyle = theme.trail;
+    context.fillStyle = theme.color;
     context.lineWidth = 3;
     const spikes = stageThree ? 7 : 4;
     for (let index = 0; index < spikes; index += 1) {
@@ -3450,7 +3760,7 @@
       context.closePath(); context.fill(); context.stroke();
     }
     if (stageThree) {
-      context.strokeStyle = "#ff9ab0";
+      context.strokeStyle = theme.core;
       context.globalAlpha = .75;
       context.lineWidth = 2;
       for (let index = 0; index < 3; index += 1) {
@@ -3463,9 +3773,9 @@
       context.globalAlpha = 1;
     }
     context.save();
-    const mutationColor = stageThree ? "#ff6c91" : "#8af2dd";
+    const mutationColor = theme.color;
     context.fillStyle = mutationColor;
-    context.strokeStyle = stageThree ? "#561629" : "#244d47";
+    context.strokeStyle = theme.trail;
     context.shadowColor = mutationColor;
     context.shadowBlur = stageThree ? 18 : 10;
     context.lineWidth = 3;
@@ -3477,9 +3787,9 @@
       context.closePath(); context.fill(); context.stroke();
     }
     if (stageThree) {
-      context.fillStyle = "#fff1b7";
+      context.fillStyle = theme.core;
       context.beginPath(); context.ellipse(0, -enemy.radius * .48, 10, 6, 0, 0, TAU); context.fill();
-      context.fillStyle = "#551225";
+      context.fillStyle = theme.trail;
       context.beginPath(); context.arc(0, -enemy.radius * .48, 3.5, 0, TAU); context.fill();
     }
     context.restore();
@@ -3671,19 +3981,20 @@
 
   function drawHealthBar(enemy) {
     const boss = isBoss(enemy);
-    const barWidth = boss ? 420 : 52;
-    const y = boss ? ROOM_HEIGHT - 26 : enemy.y - enemy.radius - 14;
+    const barWidth = boss ? 560 : 52;
+    const barHeight = boss ? 9 : 6;
+    const y = boss ? ROOM_HEIGHT - 27 : enemy.y - enemy.radius - 14;
     const x = boss ? ROOM_WIDTH / 2 - barWidth / 2 : enemy.x - barWidth / 2;
     context.fillStyle = "#161218";
-    context.fillRect(x - 2, y - 2, barWidth + 4, 10);
+    context.fillRect(x - 3, y - 3, barWidth + 6, barHeight + 6);
     context.fillStyle = boss ? enemy.bossStage === 3 ? "#f04f78" : enemy.bossStage === 2 ? "#62c9bc" : "#c04f61" : "#d99449";
-    context.fillRect(x, y, barWidth * enemy.hp / enemy.maxHp, 6);
+    context.fillRect(x, y, barWidth * enemy.hp / enemy.maxHp, barHeight);
     if (boss) {
       context.fillStyle = "#171218";
-      context.fillRect(x + barWidth / 3 - 2, y - 2, 4, 10);
-      context.fillRect(x + barWidth * 2 / 3 - 2, y - 2, 4, 10);
+      context.fillRect(x + barWidth / 3 - 2, y - 3, 4, barHeight + 6);
+      context.fillRect(x + barWidth * 2 / 3 - 2, y - 3, 4, barHeight + 6);
       context.fillStyle = "#e9d4b0";
-      context.font = "800 12px system-ui";
+      context.font = "900 13px system-ui";
       context.textAlign = "center";
       const guard = enemy.invulnerable ? " · 甲壳封闭" : enemy.type === "bossBurrow" ? " · 尾部可伤" : "";
       const threat = bossStats(enemy);
@@ -3762,6 +4073,7 @@
       }
       if (enemy.telegraph <= 0) continue;
       const pulse = .55 + Math.sin(game.elapsed * 20) * .22;
+      const theme = bossAttackThemes[enemy.type] || bossAttackThemes.bossHeart;
       if (["jump", "stomp", "burrowHead", "burrowTail"].includes(enemy.attackMode)) {
         context.save();
         context.strokeStyle = enemy.attackMode === "burrowTail" ? `rgba(123, 232, 174, ${pulse})` : `rgba(255, 92, 67, ${pulse})`;
@@ -3776,13 +4088,95 @@
       if (["laser", "hand"].includes(enemy.attackMode)) {
         context.save();
         context.translate(enemy.laserOriginX, enemy.laserOriginY);
-        context.strokeStyle = `rgba(255, 103, 70, ${pulse})`;
+        context.strokeStyle = theme.color;
+        context.globalAlpha = pulse;
         context.lineWidth = Math.max(5, enemy.laserWidth * .28);
         context.setLineDash([15, 10]);
         for (const direction of enemy.laserDirections) {
           context.beginPath(); context.moveTo(0, 0); context.lineTo(Math.cos(direction) * enemy.laserLength, Math.sin(direction) * enemy.laserLength); context.stroke();
         }
         context.setLineDash([]);
+        context.restore();
+      }
+      if (["skyfall", "burrowChain", "hoofStorm"].includes(enemy.attackMode)) {
+        context.save();
+        context.strokeStyle = theme.core;
+        context.fillStyle = theme.color;
+        context.globalAlpha = pulse;
+        context.lineWidth = 4;
+        context.setLineDash([10, 8]);
+        for (const [index, target] of enemy.telegraphTargets.entries()) {
+          context.beginPath(); context.arc(target.x, target.y, target.radius || enemy.telegraphRadius, 0, TAU); context.fill(); context.stroke();
+          context.setLineDash([]);
+          context.font = "900 15px system-ui";
+          context.textAlign = "center";
+          context.fillStyle = theme.core;
+          context.fillText(String(index + 1), target.x, target.y + 5);
+          context.setLineDash([10, 8]);
+          context.fillStyle = theme.color;
+        }
+        context.setLineDash([]);
+        context.restore();
+      }
+      if (["coilCross", "suction", "idolSpiral", "eyeCross"].includes(enemy.attackMode)) {
+        context.save();
+        context.translate(enemy.x, enemy.y);
+        context.strokeStyle = theme.color;
+        context.fillStyle = theme.color;
+        context.globalAlpha = pulse;
+        context.lineWidth = enemy.attackMode === "suction" ? 7 : 4;
+        context.setLineDash(enemy.attackMode === "suction" ? [18, 12] : [8, 8]);
+        context.beginPath();
+        context.arc(0, 0, enemy.telegraphRadius || 120, game.elapsed * (enemy.attackMode === "idolSpiral" ? 2 : -1), TAU + game.elapsed * (enemy.attackMode === "idolSpiral" ? 2 : -1));
+        context.stroke();
+        if (enemy.attackMode === "coilCross" || enemy.attackMode === "eyeCross") {
+          context.setLineDash([]);
+          for (let direction = 0; direction < 4; direction += 1) {
+            const angle = direction * Math.PI / 2 + (enemy.attackMode === "eyeCross" ? enemy.phase : 0);
+            context.beginPath(); context.moveTo(Math.cos(angle) * 28, Math.sin(angle) * 28); context.lineTo(Math.cos(angle) * 150, Math.sin(angle) * 150); context.stroke();
+          }
+        }
+        context.restore();
+      }
+      if (["handClamp", "echoLanes"].includes(enemy.attackMode)) {
+        context.save();
+        context.strokeStyle = theme.color;
+        context.globalAlpha = pulse;
+        context.lineWidth = Math.max(7, enemy.laserWidth * .3);
+        context.setLineDash([16, 11]);
+        if (enemy.attackMode === "handClamp") {
+          context.beginPath(); context.moveTo(WALL, enemy.targetY); context.lineTo(ROOM_WIDTH - WALL, enemy.targetY); context.stroke();
+        } else {
+          for (const direction of [Math.PI / 4, Math.PI * .75, Math.PI * 1.25, Math.PI * 1.75]) {
+            context.beginPath(); context.moveTo(enemy.x, enemy.y); context.lineTo(enemy.x + Math.cos(direction) * ARENA_DIAGONAL, enemy.y + Math.sin(direction) * ARENA_DIAGONAL); context.stroke();
+          }
+        }
+        context.setLineDash([]);
+        context.restore();
+      }
+      if (enemy.attackMode === "heartWall") {
+        context.save();
+        context.globalAlpha = pulse;
+        context.fillStyle = theme.color;
+        context.strokeStyle = theme.core;
+        context.lineWidth = 3;
+        for (let lane = 0; lane < 9; lane += 1) {
+          const y = WALL + 48 + lane / 8 * (ROOM_HEIGHT - WALL * 2 - 96);
+          if (Math.abs(y - enemy.wallGapY) < 78) continue;
+          context.fillRect(WALL, y - 5, ROOM_WIDTH - WALL * 2, 10);
+        }
+        context.strokeRect(WALL + 4, enemy.wallGapY - 72, ROOM_WIDTH - WALL * 2 - 8, 144);
+        context.restore();
+      }
+      if (enemy.signatureName) {
+        context.save();
+        context.textAlign = "center";
+        context.font = "900 12px system-ui";
+        context.fillStyle = theme.core;
+        context.strokeStyle = "#160f15";
+        context.lineWidth = 4;
+        context.strokeText(enemy.signatureName, enemy.x, enemy.y - enemy.radius - 34);
+        context.fillText(enemy.signatureName, enemy.x, enemy.y - enemy.radius - 34);
         context.restore();
       }
     }
@@ -3829,6 +4223,17 @@
           context.beginPath(); context.moveTo(0, 0); context.quadraticCurveTo(bullet.radius * 2.5, -bullet.radius * 1.4, bullet.radius * 3.2, 0); context.quadraticCurveTo(bullet.radius * 2.2, bullet.radius * .8, bullet.radius * .7, bullet.radius * .45); context.closePath(); context.fill(); context.stroke();
         }
         context.fillStyle = "#4a1c2e"; context.beginPath(); context.arc(0, 0, bullet.radius * .65, 0, TAU); context.fill();
+      } else if (bullet.weapon === "wisp") {
+        context.rotate((bullet.age || 0) * 5);
+        context.fillStyle = "#ccb9ff";
+        context.beginPath(); context.arc(0, 0, bullet.radius * 1.12, 0, TAU); context.fill();
+        context.strokeStyle = "#f0e7ff"; context.lineWidth = 2;
+        for (let arm = 0; arm < 3; arm += 1) { context.rotate(TAU / 3); context.beginPath(); context.moveTo(bullet.radius * .4, 0); context.quadraticCurveTo(bullet.radius * 1.8, -bullet.radius, bullet.radius * 2.5, 0); context.stroke(); }
+        context.fillStyle = "#46365d"; context.beginPath(); context.arc(bullet.radius * .25, -bullet.radius * .18, 1.6, 0, TAU); context.fill();
+      } else if (bullet.weapon === "scatter") {
+        context.fillStyle = "#ff9b5c";
+        context.beginPath(); context.moveTo(bullet.radius * 1.8, 0); context.lineTo(-bullet.radius * .9, -bullet.radius); context.lineTo(-bullet.radius * .35, 0); context.lineTo(-bullet.radius * .9, bullet.radius); context.closePath(); context.fill(); context.stroke();
+        context.fillStyle = "#fff0b0"; context.beginPath(); context.arc(bullet.radius * .35, 0, bullet.radius * .35, 0, TAU); context.fill();
       } else {
         context.beginPath();
         context.moveTo(bullet.radius * 1.6, 0);
@@ -3840,8 +4245,9 @@
     }
     context.shadowBlur = 0;
     for (const bullet of game.enemyBullets) {
-      const enemyBulletColor = bullet.stage === 3 ? "#ff3f87" : bullet.stage === 2 ? "#f07c63" : "#f05a58";
-      context.strokeStyle = enemyBulletColor;
+      const enemyBulletColor = bullet.color || (bullet.stage === 3 ? "#ff3f87" : bullet.stage === 2 ? "#f07c63" : "#f05a58");
+      const coreColor = bullet.coreColor || (bullet.stage === 3 ? "#ffc1df" : "#ff9a91");
+      context.strokeStyle = bullet.trailColor || enemyBulletColor;
       context.globalAlpha = .42;
       context.lineWidth = bullet.radius * (bullet.stage === 3 ? 1.65 : 1.3);
       context.lineCap = "round";
@@ -3849,18 +4255,44 @@
       context.moveTo(bullet.previousX ?? bullet.x, bullet.previousY ?? bullet.y);
       context.lineTo(bullet.x - bullet.vx * .022, bullet.y - bullet.vy * .022);
       context.stroke();
+      context.save();
       context.globalAlpha = 1;
-      context.fillStyle = bullet.stage === 3 ? "#a81854" : bullet.stage === 2 ? "#c44745" : "#b93646";
+      context.translate(bullet.x, bullet.y);
+      context.rotate(Math.atan2(bullet.vy, bullet.vx) + (bullet.style === "rune" || bullet.style === "shard" ? (bullet.age || 0) * 5 : 0));
+      context.fillStyle = enemyBulletColor;
+      context.strokeStyle = bullet.trailColor || "#632632";
+      context.lineWidth = 1.5;
       context.shadowColor = enemyBulletColor;
-      context.shadowBlur = bullet.stage === 3 ? 15 : 9;
-      context.beginPath(); context.arc(bullet.x, bullet.y, bullet.radius + 1, 0, TAU); context.fill();
-      context.fillStyle = bullet.stage === 3 ? "#ffc1df" : "#ff9a91";
-      context.beginPath(); context.arc(bullet.x - 2, bullet.y - 2, Math.max(1.5, bullet.radius * .35), 0, TAU); context.fill();
-      if (bullet.stage >= 2) {
-        context.strokeStyle = bullet.stage === 3 ? "#ffbed6" : "#ffc29f";
-        context.lineWidth = 1.5;
-        context.beginPath(); context.arc(bullet.x, bullet.y, bullet.radius + 4 + Math.sin(game.elapsed * 11) * 1.5, 0, TAU); context.stroke();
+      context.shadowBlur = bullet.stage === 3 ? 17 : 10;
+      const radius = bullet.radius + 1;
+      if (["thorn", "fang", "shard"].includes(bullet.style)) {
+        context.beginPath(); context.moveTo(radius * 1.8, 0); context.lineTo(-radius, -radius * .8); context.lineTo(-radius * .55, 0); context.lineTo(-radius, radius * .8); context.closePath(); context.fill(); context.stroke();
+      } else if (["drop", "tear", "flame"].includes(bullet.style)) {
+        context.beginPath(); context.moveTo(radius * 1.65, 0); context.bezierCurveTo(radius * .2, -radius * 1.3, -radius, -radius * .8, -radius * .72, 0); context.bezierCurveTo(-radius, radius * .8, radius * .2, radius * 1.3, radius * 1.65, 0); context.fill(); context.stroke();
+      } else if (bullet.style === "rune") {
+        context.rotate(Math.PI / 4); context.fillRect(-radius, -radius, radius * 2, radius * 2); context.strokeRect(-radius, -radius, radius * 2, radius * 2);
+      } else if (bullet.style === "bone") {
+        context.fillRect(-radius * 1.15, -radius * .42, radius * 2.3, radius * .84);
+        for (const side of [-1, 1]) { context.beginPath(); context.arc(side * radius, -radius * .48, radius * .48, 0, TAU); context.arc(side * radius, radius * .48, radius * .48, 0, TAU); context.fill(); }
+      } else if (bullet.style === "heart") {
+        context.beginPath(); context.moveTo(0, radius); context.bezierCurveTo(-radius * 1.5, 0, -radius, -radius, 0, -radius * .35); context.bezierCurveTo(radius, -radius, radius * 1.5, 0, 0, radius); context.fill(); context.stroke();
+      } else if (bullet.style === "eye") {
+        context.beginPath(); context.ellipse(0, 0, radius * 1.45, radius, 0, 0, TAU); context.fill(); context.stroke();
+        context.fillStyle = "#3b1622"; context.beginPath(); context.arc(radius * .25, 0, radius * .38, 0, TAU); context.fill();
+      } else if (bullet.style === "hand") {
+        context.beginPath(); context.arc(0, 0, radius, 0, TAU); context.fill();
+        for (let finger = -1; finger <= 1; finger += 1) context.fillRect(radius * .2, finger * radius * .48 - radius * .18, radius * 1.25, radius * .32);
+      } else {
+        context.beginPath(); context.arc(0, 0, radius, 0, TAU); context.fill();
       }
+      context.fillStyle = coreColor;
+      context.beginPath(); context.arc(-radius * .22, -radius * .26, Math.max(1.5, radius * .3), 0, TAU); context.fill();
+      if (bullet.stage >= 2) {
+        context.strokeStyle = coreColor;
+        context.lineWidth = 1.5;
+        context.beginPath(); context.arc(0, 0, bullet.radius + 4 + Math.sin(game.elapsed * 11) * 1.5, 0, TAU); context.stroke();
+      }
+      context.restore();
     }
     context.shadowBlur = 0;
   }
@@ -4484,6 +4916,10 @@
         biome: game.rooms[game.room].biome,
         finalBranch: game.finalBranch,
         bossMechanics: { ...game.bossMechanics },
+        bossSignatures: { ...game.bossSignatures },
+        bossSignatureResolutions: { ...game.bossSignatureResolutions },
+        visualVersion: 2,
+        bossCatalog: Object.fromEntries(Object.entries(bossProfiles).map(([id, profile]) => [id, { hp: profile.hp, stages: [...profile.stages], projectile: bossAttackThemes[id].shape, attackTheme: bossAttackThemes[id].name }])),
         floorRoom: game.rooms[game.room].floorRoom,
         roomKinds: game.rooms.map(room => room.kind),
         routeChoice: game.routeChoice ? game.routeChoice.options.map(option => option.id) : null,
@@ -4492,7 +4928,7 @@
         plannedEnemyTypes: game.rooms.flatMap(room => room.enemies),
         enemyTypes: game.enemies.map(enemy => enemy.type),
         enemyHealth: game.enemies.map(enemy => enemy.hp),
-        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, maxHp: enemy.maxHp, radius: enemy.radius, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, bossStage: enemy.bossStage, stageTransition: enemy.stageTransition, bossStats: isBoss(enemy) ? { ...bossStats(enemy) } : null, attackMode: enemy.attackMode, telegraph: enemy.telegraph, invulnerable: enemy.invulnerable, statuses: { ...enemy.statuses } })),
+        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, maxHp: enemy.maxHp, radius: enemy.radius, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, bossStage: enemy.bossStage, stageTransition: enemy.stageTransition, bossStats: isBoss(enemy) ? { ...bossStats(enemy) } : null, attackMode: enemy.attackMode, signatureName: enemy.signatureName, telegraph: enemy.telegraph, telegraphTargets: enemy.telegraphTargets?.length || 0, invulnerable: enemy.invulnerable, statuses: { ...enemy.statuses } })),
         doorOpen: game.doorOpen,
         pickupTypes: game.pickups.map(pickup => pickup.type),
         shopOffers: game.pickups.filter(pickup => pickup.shopItem && !pickup.dead).map(pickup => ({
@@ -4513,6 +4949,7 @@
         playerBullets: game.bullets.length,
         playerProjectiles: game.bullets.map(bullet => ({ weapon: bullet.weapon || "skill", homing: bullet.homing || 0, targetId: bullet.targetId || null, bounces: bullet.bounces || 0, boomerang: Boolean(bullet.boomerang), returning: Boolean(bullet.returning) })),
         enemyBullets: game.enemyBullets.length,
+        enemyProjectiles: game.enemyBullets.map(bullet => ({ style: bullet.style || "orb", bossType: bullet.bossType || null, kind: bullet.kind, curve: bullet.curve || 0, acceleration: bullet.acceleration || 0 })),
         kills: game.kills,
         bossKills: game.bossKills,
         hero: game.player.hero,
@@ -4624,10 +5061,24 @@
       if (!boss) return;
       damageEnemy(boss, Math.max(0, amount), { x: game.player.x, y: game.player.y, skill });
     },
+    triggerBossSignature() {
+      const boss = game && game.enemies.find(enemy => isBoss(enemy));
+      if (!boss || boss.bossStage < 2) return false;
+      boss.telegraph = 0;
+      boss.attackMode = null;
+      boss.signatureCooldown = 0;
+      updateBossSignature(boss, .016);
+      return boss.signatureName;
+    },
     hurt(amount = 1) {
       if (!game || game.state !== "playing") return;
       game.player.invincible = 0;
       damagePlayer(amount);
+    },
+    setPlayerInvincible(seconds = 30) {
+      if (!game || game.state !== "playing") return false;
+      game.player.invincible = Math.max(game.player.invincible, Math.max(0, seconds));
+      return true;
     },
     selectHero(id) {
       if (heroes[id]) selectedHero = id;

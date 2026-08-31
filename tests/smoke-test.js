@@ -74,6 +74,9 @@ step(2);
 
 let state = game.getState();
 assert(state.hero === "seer", "Hero selection failed");
+assert(state.visualVersion === 2, "Second-edition visual system is missing");
+assert(Object.keys(state.bossCatalog).length === 11, "Second-edition boss catalog is incomplete");
+assert(new Set(Object.values(state.bossCatalog).map(entry => entry.projectile)).size === 11, "Boss projectile silhouettes are not unique");
 assert(state.viewport.roomWidth === 1280 && state.viewport.roomHeight === 720, "Expanded 16:9 combat arena is missing");
 assert(state.viewport.gridColumns >= 18 && state.viewport.gridRows >= 11, "Expanded combat grid is too small");
 assert(state.roomCount === 55, `Expected 55 rooms, got ${state.roomCount}`);
@@ -267,7 +270,7 @@ for (let index = 0; index < 20; index += 1) game.giveItem("shield");
 game.goToRoom(4);
 step(2);
 let durabilityBoss = game.getState().enemies.find(enemy => enemy.type.startsWith("boss"));
-assert(durabilityBoss.maxHp >= 88, "Boss durability was not rebalanced");
+assert(durabilityBoss.maxHp >= 124, "Boss durability was not rebalanced");
 for (let index = 0; index < 4; index += 1) game.damageBoss(9999, true);
 durabilityBoss = game.getState().enemies.find(enemy => enemy.type.startsWith("boss"));
 assert(durabilityBoss.hp >= durabilityBoss.maxHp * 2 / 3 - .01, "A single burst skipped the first boss phase gate");
@@ -297,12 +300,17 @@ for (const bossRoom of [4, 9, 14, 19, 24, 29, 34, 39, 44, 49, 54]) {
   game.setBossHealthRatio(.3);
   step(2);
   assert(game.getState().bossStage === 3, `Boss ${bossRoom} did not enter stage 3`);
-  assert(game.getState().bossThreat.damage >= 1.5 && game.getState().bossThreat.cadence > 1.4, `Boss ${bossRoom} stage 3 threat did not escalate`);
+  assert(game.getState().bossThreat.damage >= 1.4 && game.getState().bossThreat.cadence > 1.4, `Boss ${bossRoom} stage 3 threat did not escalate`);
   assert(Object.keys(game.getState().bossMechanics).length === 1, `Boss ${bossRoom} behavior handler did not run`);
   if (bossRoom === 39) {
-    step(220);
+    step(320);
     assert(game.getState().bossWaves > 0, "Heart shockwave phase failed");
   }
+  const bossType = game.getState().enemyTypes.find(type => type.startsWith("boss"));
+  const signatureCount = game.getState().bossSignatures[bossType] || 0;
+  const signature = game.triggerBossSignature();
+  assert(signature && game.getState().bossSignatures[bossType] === signatureCount + 1, `Boss ${bossRoom} signature attack did not trigger`);
+  assert(game.getState().enemies.find(enemy => enemy.type === bossType).attackMode, `Boss ${bossRoom} signature lacks a telegraph mode`);
 }
 
 game.start();
