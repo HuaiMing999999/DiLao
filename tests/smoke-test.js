@@ -74,9 +74,11 @@ step(2);
 
 let state = game.getState();
 assert(state.hero === "seer", "Hero selection failed");
-assert(state.visualVersion === 2, "Second-edition visual system is missing");
-assert(Object.keys(state.bossCatalog).length === 11, "Second-edition boss catalog is incomplete");
+assert(state.visualVersion === 3, "Third-edition visual system is missing");
+assert(Object.keys(state.bossCatalog).length === 11, "Third-edition boss catalog is incomplete");
 assert(new Set(Object.values(state.bossCatalog).map(entry => entry.projectile)).size === 11, "Boss projectile silhouettes are not unique");
+const bossForms = Object.values(state.bossFormCatalog).flat();
+assert(bossForms.length === 33 && new Set(bossForms).size === 33, "Boss phase forms are not 33 unique silhouettes");
 assert(state.viewport.roomWidth === 1280 && state.viewport.roomHeight === 720, "Expanded 16:9 combat arena is missing");
 assert(state.viewport.gridColumns >= 18 && state.viewport.gridRows >= 11, "Expanded combat grid is too small");
 assert(state.roomCount === 55, `Expected 55 rooms, got ${state.roomCount}`);

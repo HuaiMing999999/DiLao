@@ -86,6 +86,19 @@
     bossBurrow: { hp: 442, radius: 46, speed: 112, stages: ["潜行", "露尾", "掘袭"] },
     bossInfernal: { hp: 520, radius: 52, speed: 88, stages: ["献祭", "魔像", "双蹄"] }
   };
+  const bossFormCatalog = {
+    bossCoil: ["coil-larva", "coil-shed-serpent", "coil-broken-hydra"],
+    bossHopper: ["hopper-brood", "hopper-stilt", "hopper-crater-colossus"],
+    bossDevourer: ["devourer-crawler", "devourer-maw", "devourer-fourfold-gorge"],
+    bossIdol: ["idol-sealed", "idol-brood-nest", "idol-bloom-altar"],
+    bossPeep: ["peep-lacrimal", "peep-hollow-orbit", "peep-astral-eyes"],
+    bossMatron: ["matron-door-face", "matron-pallbearer", "matron-four-hand-shadow"],
+    bossHollow: ["hollow-spine-worm", "hollow-shattered-chain", "hollow-echo-centipede"],
+    bossHeart: ["heart-cocoon", "heart-everted-veins", "heart-riven-core"],
+    bossBloat: ["bloat-drowned-corpse", "bloat-exposed-orbits", "bloat-trinity-beam"],
+    bossBurrow: ["burrow-carapace", "burrow-tail-bloom", "burrow-drill-beast"],
+    bossInfernal: ["infernal-offering", "infernal-winged-idol", "infernal-judgement-hooves"]
+  };
   const bossStageNames = Object.fromEntries(Object.entries(bossProfiles).map(([id, profile]) => [id, profile.stages]));
   const bossAttackThemes = {
     bossCoil: { name: "腐毒骨刺", color: "#9ac65b", core: "#efff9f", trail: "#55783d", shape: "thorn" },
@@ -503,6 +516,136 @@
     context.beginPath(); context.moveTo(-length / 2, 0); context.lineTo(length / 2, 0); context.stroke();
     for (const offset of [-length * .25, 0, length * .25]) {
       context.beginPath(); context.moveTo(offset - 1, -2.5); context.lineTo(offset + 1, 2.5); context.stroke();
+    }
+    context.restore();
+  }
+
+  function drawLayeredEllipse(x, y, radiusX, radiusY, rotation, fill, stroke, highlight = "#ffffff") {
+    context.save();
+    context.translate(x, y);
+    context.rotate(rotation);
+    context.fillStyle = fill;
+    context.strokeStyle = stroke;
+    context.lineWidth = Math.max(2.5, Math.min(radiusX, radiusY) * .16);
+    context.beginPath();
+    context.ellipse(0, 0, radiusX, radiusY, 0, 0, TAU);
+    context.fill();
+    context.stroke();
+    context.fillStyle = highlight;
+    context.globalAlpha = .16;
+    context.beginPath();
+    context.ellipse(-radiusX * .24, -radiusY * .3, radiusX * .5, radiusY * .24, -.25, 0, TAU);
+    context.fill();
+    context.globalAlpha = 1;
+    context.restore();
+  }
+
+  function drawBonePlate(x, y, widthValue, heightValue, rotation = 0, cracked = false, fill = "#c8b98f") {
+    context.save();
+    context.translate(x, y);
+    context.rotate(rotation);
+    context.fillStyle = fill;
+    context.strokeStyle = "#33282a";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(-widthValue * .5, -heightValue * .18);
+    context.lineTo(-widthValue * .28, -heightValue * .5);
+    context.lineTo(widthValue * .32, -heightValue * .43);
+    context.lineTo(widthValue * .52, 0);
+    context.lineTo(widthValue * .28, heightValue * .5);
+    context.lineTo(-widthValue * .38, heightValue * .4);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    context.strokeStyle = "rgba(78, 58, 52, .58)";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(-widthValue * .3, -heightValue * .16);
+    context.lineTo(widthValue * .3, heightValue * .15);
+    if (cracked) {
+      context.moveTo(0, -heightValue * .34);
+      context.lineTo(-widthValue * .08, 0);
+      context.lineTo(widthValue * .12, heightValue * .3);
+    }
+    context.stroke();
+    context.restore();
+  }
+
+  function drawFang(x, y, length, widthValue, rotation = 0, fill = "#ead9a8") {
+    context.save();
+    context.translate(x, y);
+    context.rotate(rotation);
+    context.fillStyle = fill;
+    context.strokeStyle = "#352528";
+    context.lineWidth = 2.5;
+    context.beginPath();
+    context.moveTo(-widthValue / 2, 0);
+    context.quadraticCurveTo(0, -widthValue * .35, widthValue / 2, 0);
+    context.lineTo(0, length);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    context.restore();
+  }
+
+  function drawVein(x1, y1, controlX, controlY, x2, y2, color, widthValue = 4) {
+    context.strokeStyle = "#2b1920";
+    context.lineWidth = widthValue + 3;
+    context.lineCap = "round";
+    context.beginPath(); context.moveTo(x1, y1); context.quadraticCurveTo(controlX, controlY, x2, y2); context.stroke();
+    context.strokeStyle = color;
+    context.lineWidth = widthValue;
+    context.beginPath(); context.moveTo(x1, y1); context.quadraticCurveTo(controlX, controlY, x2, y2); context.stroke();
+  }
+
+  function drawRimmedEye(x, y, radiusX, radiusY, lookX, lookY, iris = "#8d2739", sclera = "#e8d9b9") {
+    context.save();
+    context.translate(x, y);
+    context.fillStyle = "#431f2a";
+    context.beginPath(); context.ellipse(0, 0, radiusX + 5, radiusY + 5, 0, 0, TAU); context.fill();
+    context.fillStyle = sclera;
+    context.strokeStyle = "#24191e";
+    context.lineWidth = 2.5;
+    context.beginPath(); context.ellipse(0, 0, radiusX, radiusY, 0, 0, TAU); context.fill(); context.stroke();
+    context.fillStyle = iris;
+    context.beginPath(); context.arc(clamp(lookX, -radiusX * .25, radiusX * .25), clamp(lookY, -radiusY * .25, radiusY * .25), Math.min(radiusX, radiusY) * .55, 0, TAU); context.fill();
+    context.fillStyle = "#171218";
+    context.beginPath(); context.arc(clamp(lookX, -radiusX * .25, radiusX * .25), clamp(lookY, -radiusY * .25, radiusY * .25), Math.min(radiusX, radiusY) * .25, 0, TAU); context.fill();
+    context.fillStyle = "#fff7e5";
+    context.beginPath(); context.arc(-radiusX * .17, -radiusY * .22, Math.max(1.5, radiusY * .13), 0, TAU); context.fill();
+    context.restore();
+  }
+
+  function drawMaw(x, y, radiusX, radiusY, teeth = 7, rotation = 0, open = 1) {
+    context.save();
+    context.translate(x, y);
+    context.rotate(rotation);
+    context.fillStyle = "#24141c";
+    context.strokeStyle = "#4d242d";
+    context.lineWidth = 4;
+    context.beginPath(); context.ellipse(0, 0, radiusX, radiusY * open, 0, 0, TAU); context.fill(); context.stroke();
+    for (let index = 0; index < teeth; index += 1) {
+      const ratio = teeth === 1 ? .5 : index / (teeth - 1);
+      const toothX = -radiusX * .72 + ratio * radiusX * 1.44;
+      drawFang(toothX, -radiusY * open * .72, radiusY * open * .65, Math.max(3, radiusX / teeth), 0);
+      drawFang(toothX, radiusY * open * .72, radiusY * open * .65, Math.max(3, radiusX / teeth), Math.PI);
+    }
+    context.restore();
+  }
+
+  function drawChitinSegment(x, y, radiusX, radiusY, rotation, fill, accent, cracked = false) {
+    drawLayeredEllipse(x, y, radiusX, radiusY, rotation, fill, "#292126", accent);
+    context.save();
+    context.translate(x, y);
+    context.rotate(rotation);
+    context.strokeStyle = accent;
+    context.globalAlpha = .48;
+    context.lineWidth = 2;
+    context.beginPath(); context.arc(0, 0, Math.min(radiusX, radiusY) * .72, -.9, .9); context.stroke();
+    if (cracked) {
+      context.strokeStyle = "#372128";
+      context.globalAlpha = .9;
+      context.beginPath(); context.moveTo(-4, -radiusY * .72); context.lineTo(2, -3); context.lineTo(-5, 7); context.lineTo(4, radiusY * .66); context.stroke();
     }
     context.restore();
   }
@@ -3023,6 +3166,103 @@
     context.restore();
   }
 
+  function drawHeroLowerBody(player, stride) {
+    context.save();
+    context.strokeStyle = "#20171c";
+    context.lineWidth = 4;
+    if (player.hero === "breaker") {
+      context.fillStyle = "#302326";
+      roundedRect(-27, -4, 16, 31, 5); context.fill(); context.stroke();
+      context.fillStyle = "#b84f38";
+      for (const y of [2, 11, 20]) { context.beginPath(); context.arc(-27, y, 4, 0, TAU); context.fill(); }
+      drawLimb(-10, 12, -15 + stride, 24, 9, "#4d3231");
+      drawLimb(6, 12, 10 - stride, 24, 9, "#4d3231");
+      context.fillStyle = "#6b3834";
+      context.beginPath(); context.moveTo(-19, -3); context.lineTo(13, -6); context.lineTo(18, 19); context.lineTo(4, 27); context.lineTo(-14, 22); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#a94a39";
+      context.beginPath(); context.moveTo(-13, 1); context.lineTo(3, -1); context.lineTo(-1, 21); context.lineTo(-11, 18); context.closePath(); context.fill();
+      drawBonePlate(12, 4, 16, 25, .12, false, "#79554a");
+      context.fillStyle = "#d06a48"; context.fillRect(-12, 8, 23, 4);
+    } else if (player.hero === "gambler") {
+      drawLimb(-6, 11, -9 + stride, 25, 6, "#8b7147");
+      drawLimb(6, 11, 9 - stride, 25, 6, "#8b7147");
+      context.fillStyle = "#3d3023";
+      context.beginPath(); context.moveTo(-15, -6); context.lineTo(15, -6); context.lineTo(19, 15); context.lineTo(8, 30); context.lineTo(0, 20); context.lineTo(-9, 30); context.lineTo(-18, 14); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#7b5c2d";
+      context.beginPath(); context.moveTo(-7, -5); context.lineTo(6, -5); context.lineTo(9, 17); context.lineTo(0, 22); context.lineTo(-8, 15); context.closePath(); context.fill();
+      context.strokeStyle = "#e0b85b"; context.lineWidth = 2; context.beginPath(); context.moveTo(-3, 0); context.lineTo(1, 18); context.stroke();
+      context.fillStyle = "#d7a94e"; context.beginPath(); context.arc(-15, 10, 6, 0, TAU); context.fill(); context.stroke();
+    } else if (player.hero === "seer") {
+      const float = Math.sin(game.elapsed * 4) * 2;
+      context.fillStyle = "#332643";
+      context.beginPath(); context.moveTo(-17, -7); context.quadraticCurveTo(-26, 8, -20, 27 + float); context.lineTo(-7, 18); context.lineTo(0, 31 + float); context.lineTo(8, 18); context.lineTo(21, 27 + float); context.quadraticCurveTo(27, 7, 15, -8); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#5d4777";
+      context.beginPath(); context.moveTo(-10, -4); context.quadraticCurveTo(-8, 12, 0, 23); context.quadraticCurveTo(9, 11, 10, -4); context.closePath(); context.fill();
+      context.strokeStyle = "#a88cd6"; context.lineWidth = 2;
+      for (const side of [-1, 1]) { context.beginPath(); context.arc(side * 17, 8, 7 + Math.sin(game.elapsed * 3 + side) * 1.5, 0, TAU); context.stroke(); }
+      context.fillStyle = "#bba7e6"; context.globalAlpha = .5;
+      for (let mote = 0; mote < 3; mote += 1) { const angle = game.elapsed * .8 + mote * TAU / 3; context.beginPath(); context.arc(Math.cos(angle) * 24, 7 + Math.sin(angle) * 17, 2.5, 0, TAU); context.fill(); }
+      context.globalAlpha = 1;
+    } else {
+      drawLimb(-12, 10, -17 + stride, 26, 11, "#526f60");
+      drawLimb(10, 10, 14 - stride, 26, 11, "#526f60");
+      context.fillStyle = "#293e38";
+      context.beginPath(); context.moveTo(-23, -6); context.lineTo(19, -7); context.lineTo(25, 18); context.lineTo(10, 29); context.lineTo(-13, 28); context.lineTo(-25, 15); context.closePath(); context.fill(); context.stroke();
+      for (const side of [-1, 1]) drawBonePlate(side * 19, 1, 18, 25, side * .18, false, "#66806d");
+      context.strokeStyle = "#8eb198"; context.lineWidth = 3;
+      context.beginPath(); context.moveTo(-12, -4); context.lineTo(-9, 22); context.moveTo(0, -6); context.lineTo(1, 25); context.moveTo(12, -5); context.lineTo(10, 21); context.stroke();
+    }
+    context.restore();
+  }
+
+  function drawHeroUpperBody(player) {
+    const skin = player.flash > 0 ? "#fff" : "#dcc6a3";
+    context.save();
+    if (player.hero === "breaker") {
+      drawLimb(-8, 1, -20, 10, 8, "#a96b57");
+      drawLimb(5, 1, 20, 1, 8, "#a96b57");
+      drawLayeredEllipse(1, -11, 20, 17, -.12, skin, "#281b20", "#ffe3b5");
+      context.fillStyle = "#3a2929"; context.strokeStyle = "#1c1519"; context.lineWidth = 4;
+      context.beginPath(); context.moveTo(-17, -20); context.lineTo(7, -29); context.lineTo(21, -16); context.lineTo(15, 2); context.lineTo(-4, -1); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#d15c42"; roundedRect(-11, -18, 22, 4, 2); context.fill();
+      context.fillStyle = "#151116"; for (const y of [-9, -2]) context.fillRect(5, y, 11, 2);
+      drawRimmedEye(-5, -11, 4.5, 3.5, 1, 0, "#d66a42");
+      context.strokeStyle = "#f29a54"; context.lineWidth = 3; context.beginPath(); context.moveTo(-9, -26); context.quadraticCurveTo(-3, -39, 6, -40); context.stroke();
+    } else if (player.hero === "gambler") {
+      drawLimb(-6, 1, -17, 9, 6, "#d1b98c");
+      drawLimb(6, 0, 19, 1, 6, "#d1b98c");
+      drawLayeredEllipse(1, -10, 16, 17, -.04, skin, "#281b20", "#ffe2b4");
+      context.fillStyle = "#30231e"; context.beginPath(); context.ellipse(0, -24, 28, 7, -.08, 0, TAU); context.fill(); context.strokeStyle = "#1e1718"; context.lineWidth = 3; context.stroke();
+      context.fillStyle = "#6f522b"; context.beginPath(); context.moveTo(-15, -25); context.lineTo(-9, -42); context.lineTo(11, -40); context.lineTo(17, -24); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#d8aa4f"; context.fillRect(-13, -29, 27, 4);
+      context.fillStyle = "#3a2324"; context.beginPath(); context.moveTo(-12, -12); context.quadraticCurveTo(0, -18, 14, -10); context.lineTo(12, -3); context.quadraticCurveTo(0, -8, -13, -3); context.closePath(); context.fill();
+      drawRimmedEye(7, -12, 4, 3, 1, 0, "#d4a44e");
+      context.strokeStyle = "#e3bd65"; context.lineWidth = 2; context.beginPath(); context.arc(15, -11, 8, 0, TAU); context.moveTo(21, -6); context.lineTo(25, 2); context.stroke();
+    } else if (player.hero === "seer") {
+      drawLimb(-7, 2, -19, 10, 6, "#766292");
+      drawLimb(7, 1, 20, 0, 6, "#766292");
+      context.fillStyle = "#2c203b"; context.strokeStyle = "#211721"; context.lineWidth = 4;
+      context.beginPath(); context.moveTo(-21, -3); context.quadraticCurveTo(-23, -31, 0, -43); context.quadraticCurveTo(24, -29, 21, -2); context.lineTo(12, -18); context.lineTo(-11, -18); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = "#17131c"; context.beginPath(); context.ellipse(1, -13, 13, 11, 0, 0, TAU); context.fill();
+      drawRimmedEye(1, -13, 8, 5, 1, 0, "#8e69c8", "#d9cbeb");
+      context.fillStyle = "#d9c6ff"; context.shadowColor = "#a36ff1"; context.shadowBlur = 14;
+      context.beginPath(); context.ellipse(1, -29, 7, 4, 0, 0, TAU); context.fill(); context.shadowBlur = 0;
+      context.strokeStyle = "#9c7dcc"; context.lineWidth = 2; context.beginPath(); context.arc(0, -11, 26, -.7, .7); context.stroke();
+    } else {
+      drawLimb(-12, 1, -24, 10, 11, "#66806d");
+      drawLimb(9, 0, 23, 0, 11, "#66806d");
+      context.fillStyle = "#263b37"; context.strokeStyle = "#1c2926"; context.lineWidth = 5;
+      context.beginPath(); context.moveTo(-21, -25); context.lineTo(-16, 3); context.lineTo(17, 4); context.lineTo(23, -24); context.closePath(); context.fill(); context.stroke();
+      context.strokeStyle = "#789b83"; context.lineWidth = 4;
+      for (let bar = -2; bar <= 2; bar += 1) { context.beginPath(); context.moveTo(bar * 8, -29); context.lineTo(bar * 7, 3); context.stroke(); }
+      context.beginPath(); context.arc(1, -23, 22, Math.PI, TAU); context.stroke();
+      context.fillStyle = "#171817"; context.beginPath(); context.ellipse(2, -10, 12, 9, 0, 0, TAU); context.fill();
+      drawRimmedEye(8, -12, 4.5, 3.5, 1, 0, "#79aa85", "#bcccad");
+      drawBonePlate(-22, -2, 17, 24, -.2, false, "#6c8873");
+    }
+    context.restore();
+  }
+
   function drawPlayer() {
     const player = game.player;
     const hero = heroes[player.hero];
@@ -3041,53 +3281,14 @@
     }
     if (player.invincible > 0 && Math.floor(player.invincible * 14) % 2 === 0) context.globalAlpha = .35;
     context.rotate(bodyAngle + rollRotation);
-    context.scale(1.2 * (1 + player.squash * .14), 1.2 * (1 - player.squash * .11));
+    context.scale(1.28 * (1 + player.squash * .14), 1.28 * (1 - player.squash * .11));
     context.fillStyle = "#100d11aa";
     context.beginPath(); context.ellipse(-3, 19, 24, 9, 0, 0, TAU); context.fill();
-    drawHeroBackpiece(player, hero);
-    drawLimb(-8, 11, -12 + stride, 20, 7, "#ceb58f");
-    drawLimb(3, 12, 7 - stride, 20, 7, "#ceb58f");
-    context.fillStyle = player.hero === "breaker" ? "#6d3b35" : player.hero === "gambler" ? "#6b5730" : player.hero === "seer" ? "#4c3d66" : "#315f55";
-    context.strokeStyle = "#1d2523";
-    context.lineWidth = 4;
-    context.beginPath();
-    context.moveTo(-15, -1); context.quadraticCurveTo(-18, 16, -11, 22);
-    context.quadraticCurveTo(0, 27, 12, 21); context.quadraticCurveTo(17, 12, 12, -3); context.closePath();
-    context.fill(); context.stroke();
-    context.fillStyle = hero.color;
-    context.globalAlpha = .62;
-    context.beginPath(); context.ellipse(-5, 8, 10, 14, -.2, 0, TAU); context.fill();
-    context.globalAlpha = 1;
-    context.strokeStyle = "#1f3933";
-    context.lineWidth = 2;
-    context.beginPath(); context.moveTo(-7, 1); context.quadraticCurveTo(-1, 10, -5, 21); context.stroke();
+    drawHeroLowerBody(player, stride);
     context.save();
     context.rotate(player.roll > 0 ? 0 : angleDelta(player.aimAngle, bodyAngle));
     context.translate(-player.recoil, 0);
-    drawLimb(4, 3, 20, 1, 6, "#cfb58f");
-    drawLimb(-8, 3, -18, 9, 6, "#cfb58f");
-    context.fillStyle = player.flash > 0 ? "#fff" : "#dcc6a3";
-    context.strokeStyle = "#281c20";
-    context.lineWidth = 4;
-    context.beginPath(); context.ellipse(2, -10, 19, 18, -.08, 0, TAU); context.fill(); context.stroke();
-    drawFleshTexture(18, 811, "#745648");
-    context.fillStyle = "#b39277";
-    context.globalAlpha = .35;
-    context.beginPath(); context.ellipse(-4, -3, 10, 5, 0, 0, TAU); context.fill();
-    context.globalAlpha = 1;
-    context.fillStyle = "#36242a";
-    context.beginPath();
-    context.moveTo(-14, -18); context.quadraticCurveTo(-8, -31, 0, -25);
-    context.quadraticCurveTo(8, -31, 16, -20); context.quadraticCurveTo(6, -24, -2, -20); context.closePath(); context.fill();
-    drawScar(-7, -8, 10, -.35, "#8d6453");
-    drawEye(7, -14, 5.5, 1.5, 0);
-    context.fillStyle = "#7fc4dc";
-    context.globalAlpha = .9;
-    context.beginPath(); context.ellipse(11, -5, 3.2, 6 + Math.sin(game.elapsed * 7), -.12, 0, TAU); context.fill();
-    context.globalAlpha = 1;
-    context.fillStyle = "#321e24";
-    context.beginPath(); context.ellipse(17, -7, 4, 5, 0, 0, TAU); context.fill();
-    drawHeroIdentity(player, hero);
+    drawHeroUpperBody(player);
     if (player.rage > 0) {
       context.strokeStyle = hero.color; context.lineWidth = 3; context.globalAlpha = .5 + Math.sin(game.elapsed * 14) * .25;
       context.beginPath(); context.arc(0, -2, 34, 0, TAU); context.stroke(); context.globalAlpha = 1;
@@ -3235,10 +3436,7 @@
       }
       context.fillStyle = "#100c10aa";
       context.beginPath(); context.ellipse(-2, enemy.radius * .9, enemy.radius * 1.25, enemy.radius * .48, 0, 0, TAU); context.fill();
-      if (!isBoss(enemy)) {
-        context.scale(1.12, 1.12);
-        drawEnemyRoleSilhouette(enemy);
-      }
+      if (!isBoss(enemy)) context.scale(1.18, 1.18);
       if (enemy.type === "grunt") drawGrunt(enemy);
       else if (enemy.type === "turret") drawTurret(enemy);
       else if (enemy.type === "charger") drawCharger(enemy);
@@ -3405,57 +3603,39 @@
   }
 
   function drawGrunt(enemy) {
-    const twitch = Math.sin(enemy.phase * 5) * 2;
-    drawLimb(-8, 10, -13, 18 + twitch, 6, "#a94a4b");
-    drawLimb(7, 10, 12, 18 - twitch, 6, "#a94a4b");
-    drawBlob(18, 12, enemy.id, enemy.flash > 0 ? "#fff" : "#b84a4c", "#361e24", 4);
-    drawFleshTexture(18, enemy.id * 7, "#5e202a");
-    context.fillStyle = "#d76c64";
-    context.globalAlpha = .5;
-    context.beginPath(); context.ellipse(-5, -6, 8, 5, -.4, 0, TAU); context.fill();
-    context.globalAlpha = 1;
-    drawEye(3, -5, 5, 2, 0, true);
-    context.fillStyle = "#351d23";
-    context.beginPath(); context.ellipse(10, 7, 8, 5, 0, 0, TAU); context.fill();
-    context.fillStyle = "#ead3a5";
-    for (const tooth of [-3, 2]) context.fillRect(11, tooth, 5, 2);
-    drawScar(-8, 7, 11, .5);
-    context.fillStyle = "#97c3c0";
-    context.globalAlpha = .72;
-    context.beginPath(); context.ellipse(14, 13, 2, 5, -.2, 0, TAU); context.fill();
-    context.globalAlpha = 1;
-    context.fillStyle = "#282026";
-    roundedRect(14, -5, 24, 10, 4); context.fill();
-    context.fillStyle = "#b58a4c";
-    context.fillRect(32, -3, 8, 6);
+    const gait = Math.sin(enemy.phase * 6);
+    drawLimb(-13, 6, -22, 16 + gait * 4, 7, "#873b42");
+    drawLimb(-7, -7, -19, -16 - gait * 3, 6, "#873b42");
+    context.strokeStyle = "#3a2028"; context.lineWidth = 5;
+    context.beginPath(); context.moveTo(-22, 0); context.quadraticCurveTo(-31, -7, -37, 2); context.stroke();
+    drawLayeredEllipse(-3, 0, 22, 17, .08, enemy.flash > 0 ? "#fff" : "#a8444c", "#321c23", "#f58f79");
+    drawFleshTexture(19, enemy.id * 7, "#501e2a");
+    context.fillStyle = "#5b252f"; context.beginPath(); context.moveTo(-17, -13); context.lineTo(-5, -24); context.lineTo(2, -14); context.closePath(); context.fill();
+    drawBonePlate(-10, -3, 12, 20, -.35, true, "#bda37c");
+    drawRimmedEye(5, -6, 6, 4, 2, 0, "#a9283f");
+    drawMaw(6, 7, 9, 5, 4, 0, .75);
+    context.fillStyle = "#22191d"; context.strokeStyle = "#151014"; context.lineWidth = 3;
+    roundedRect(13, -6, 27, 12, 4); context.fill(); context.stroke();
+    context.fillStyle = "#b58445"; context.beginPath(); context.moveTo(35, -4); context.lineTo(45, -2); context.lineTo(45, 3); context.lineTo(35, 5); context.closePath(); context.fill();
+    context.strokeStyle = "#d57d4b"; context.lineWidth = 2; context.beginPath(); context.moveTo(17, -2); context.lineTo(34, -2); context.stroke();
   }
 
   function drawTurret(enemy) {
-    context.rotate(-enemy.angle);
-    drawBlob(23, 10, enemy.id, enemy.flash > 0 ? "#fff" : "#79513f", "#2a1b1c", 5);
-    context.strokeStyle = "#b2784e";
-    context.lineWidth = 4;
-    for (let angle = 0; angle < TAU; angle += TAU / 6) {
-      context.beginPath(); context.moveTo(Math.cos(angle) * 13, Math.sin(angle) * 13); context.lineTo(Math.cos(angle) * 21, Math.sin(angle) * 21); context.stroke();
+    const pulse = 1 + Math.sin(enemy.phase * 4) * .06;
+    context.fillStyle = "#493329"; context.strokeStyle = "#24191b"; context.lineWidth = 4;
+    for (let root = 0; root < 4; root += 1) {
+      const angle = root / 4 * TAU + .35;
+      context.beginPath(); context.moveTo(Math.cos(angle) * 12, Math.sin(angle) * 12); context.quadraticCurveTo(Math.cos(angle + .25) * 25, Math.sin(angle + .25) * 25, Math.cos(angle) * 35, Math.sin(angle) * 35); context.lineTo(Math.cos(angle + .18) * 28, Math.sin(angle + .18) * 28); context.closePath(); context.fill(); context.stroke();
     }
-    context.fillStyle = "#d9b664";
-    context.strokeStyle = "#33231e";
-    context.lineWidth = 3;
-    context.beginPath(); context.arc(0, 0, 12, 0, TAU); context.fill(); context.stroke();
-    context.strokeStyle = "#6c452f";
-    context.lineWidth = 2;
-    context.beginPath(); context.arc(0, 0, 17, 0, TAU); context.stroke();
-    context.fillStyle = "#f1d27b";
-    for (let index = 0; index < 4; index += 1) {
-      const angle = index * Math.PI / 2;
-      context.beginPath(); context.arc(Math.cos(angle) * 15, Math.sin(angle) * 15, 2, 0, TAU); context.fill();
-    }
-    drawEye(0, 0, 7, Math.cos(enemy.angle) * 2, Math.sin(enemy.angle) * 2, true);
-    context.rotate(enemy.angle);
-    context.fillStyle = "#21191d";
-    roundedRect(5, -7, 38, 14, 5); context.fill();
-    context.fillStyle = "#a87945";
-    context.fillRect(32, -4, 12, 8);
+    context.save(); context.rotate(enemy.phase * .35);
+    for (let plate = 0; plate < 5; plate += 1) { const angle = plate / 5 * TAU; drawBonePlate(Math.cos(angle) * 18, Math.sin(angle) * 18, 12, 19, angle, false, "#9a7148"); }
+    context.restore();
+    drawLayeredEllipse(0, 0, 17 * pulse, 16 / pulse, 0, enemy.flash > 0 ? "#fff" : "#6d4438", "#26191d", "#d18b62");
+    drawRimmedEye(0, 0, 9, 8, 2, 0, "#c8903f", "#e8d7a4");
+    context.fillStyle = "#20161a"; context.strokeStyle = "#161015"; context.lineWidth = 3;
+    roundedRect(10, -8, 39, 16, 6); context.fill(); context.stroke();
+    context.fillStyle = "#bd8a4b"; roundedRect(39, -5, 14, 10, 3); context.fill(); context.stroke();
+    context.fillStyle = "#f2ce72"; context.beginPath(); context.arc(45, 0, 2.5, 0, TAU); context.fill();
   }
 
   function drawCharger(enemy) {
@@ -3472,138 +3652,593 @@
       context.setLineDash([]);
       context.restore();
     }
-    drawLimb(-10, 11, -16, 22, 7, "#74613f");
-    drawLimb(7, 11, 13, 22, 7, "#74613f");
-    context.fillStyle = enemy.flash > 0 ? "#fff" : enemy.charge > 0 ? "#d77a48" : "#837348";
-    context.strokeStyle = "#2d231c";
-    context.lineWidth = 4;
-    context.beginPath();
-    context.moveTo(23, 0); context.quadraticCurveTo(8, -18, -16, -15); context.lineTo(-22, 0); context.lineTo(-16, 15); context.quadraticCurveTo(8, 18, 23, 0); context.closePath(); context.fill(); context.stroke();
-    context.strokeStyle = "#54472d";
-    context.lineWidth = 2;
-    context.beginPath(); context.moveTo(-13, -10); context.quadraticCurveTo(0, -3, 17, -5); context.stroke();
-    context.beginPath(); context.moveTo(-13, 10); context.quadraticCurveTo(1, 3, 17, 5); context.stroke();
-    drawFleshTexture(17, enemy.id * 11, "#2d2a1d");
-    context.fillStyle = "#e6c779";
-    context.strokeStyle = "#37281e";
-    context.lineWidth = 3;
-    context.beginPath(); context.moveTo(-7, -12); context.lineTo(-17, -29); context.lineTo(2, -17); context.closePath(); context.fill(); context.stroke();
-    context.beginPath(); context.moveTo(-7, 12); context.lineTo(-17, 29); context.lineTo(2, 17); context.closePath(); context.fill(); context.stroke();
-    drawEye(8, 0, 6, 2, 0, true);
+    const stride = Math.sin(enemy.phase * 8) * (enemy.charge > 0 ? 6 : 2);
+    for (const side of [-1, 1]) {
+      drawLimb(-10, side * 9, -22 + stride, side * 20, 8, "#685839");
+      drawBonePlate(-20, side * 20, 13, 10, side * .25, false, "#88754a");
+    }
+    drawLayeredEllipse(-2, 0, 27, 17, 0, enemy.flash > 0 ? "#fff" : enemy.charge > 0 ? "#c76b3f" : "#77663f", "#2c221d", "#c3a767");
+    for (const side of [-1, 1]) drawBonePlate(-4, side * 13, 25, 11, side * .18, false, "#a08b5a");
+    context.fillStyle = "#c7b278"; context.strokeStyle = "#34271f"; context.lineWidth = 4;
+    context.beginPath(); context.moveTo(7, -15); context.quadraticCurveTo(28, -15, 43, 0); context.quadraticCurveTo(28, 15, 7, 15); context.lineTo(17, 0); context.closePath(); context.fill(); context.stroke();
+    drawFang(28, -7, 25, 8, -Math.PI / 2 + .35, "#e5d49d");
+    drawFang(28, 7, 25, 8, -Math.PI / 2 - .35, "#e5d49d");
+    drawRimmedEye(12, 0, 6, 5, 2, 0, "#c44932", "#e2d2a8");
+    context.strokeStyle = "#4b3d28"; context.lineWidth = 2; context.beginPath(); context.moveTo(-20, 0); context.lineTo(8, 0); context.stroke();
   }
 
   function drawBat(enemy) {
-    const flap = Math.sin(enemy.phase * 6) * 7;
-    context.fillStyle = enemy.flash > 0 ? "#fff" : "#70566f";
-    context.strokeStyle = "#281c29";
-    context.lineWidth = 4;
-    context.beginPath();
-    context.moveTo(0, 0); context.quadraticCurveTo(-17, -19 - flap, -31, -5); context.lineTo(-22, 5); context.lineTo(-13, 2); context.lineTo(-8, 11);
-    context.quadraticCurveTo(0, 16, 8, 11); context.lineTo(13, 2); context.lineTo(22, 5); context.lineTo(31, -5); context.quadraticCurveTo(17, -19 - flap, 0, 0); context.fill(); context.stroke();
-    context.strokeStyle = "#9a728d";
-    context.globalAlpha = .55;
-    context.lineWidth = 1.5;
+    const flap = Math.sin(enemy.phase * 7) * 9;
+    context.fillStyle = enemy.flash > 0 ? "#fff" : "#62455f"; context.strokeStyle = "#251a28"; context.lineWidth = 4;
     for (const side of [-1, 1]) {
-      context.beginPath(); context.moveTo(side * 4, 1); context.lineTo(side * 24, -7 - flap * .45); context.stroke();
-      context.beginPath(); context.moveTo(side * 7, 3); context.lineTo(side * 19, 4); context.stroke();
+      context.beginPath(); context.moveTo(side * 3, -2); context.quadraticCurveTo(side * 17, -22 - flap, side * 39, -14 - flap * .35); context.lineTo(side * 31, -1); context.lineTo(side * 37, 10); context.lineTo(side * 21, 7); context.lineTo(side * 13, 18); context.quadraticCurveTo(side * 10, 7, side * 3, 4); context.closePath(); context.fill(); context.stroke();
+      context.strokeStyle = "#a3799e"; context.lineWidth = 2;
+      context.beginPath(); context.moveTo(side * 5, 0); context.lineTo(side * 31, -10 - flap * .3); context.moveTo(side * 12, 5); context.lineTo(side * 29, 6); context.stroke();
     }
-    context.globalAlpha = 1;
-    context.fillStyle = "#d8b36a";
-    context.strokeStyle = "#30211f";
-    context.lineWidth = 3;
-    context.beginPath(); context.arc(0, 1, 9, 0, TAU); context.fill(); context.stroke();
-    context.fillStyle = "#f25d62";
-    context.beginPath(); context.arc(4, -2, 2.5, 0, TAU); context.fill();
-    context.fillStyle = "#efe0ba";
-    context.beginPath(); context.moveTo(5, 7); context.lineTo(9, 13); context.lineTo(1, 8); context.fill();
+    drawLayeredEllipse(0, 2, 13, 17, 0, enemy.flash > 0 ? "#fff" : "#805a72", "#261b28", "#b783a2");
+    context.fillStyle = "#b89a6e"; context.strokeStyle = "#2e2325"; context.lineWidth = 2.5;
+    for (const side of [-1, 1]) { context.beginPath(); context.moveTo(side * 8, -10); context.lineTo(side * 16, -25); context.lineTo(side * 2, -16); context.closePath(); context.fill(); context.stroke(); }
+    drawRimmedEye(-5, -2, 4, 3, 1, 0, "#b43b4d"); drawRimmedEye(5, -2, 4, 3, 1, 0, "#b43b4d");
+    drawMaw(0, 8, 6, 4, 3, 0, .9);
   }
 
   function drawSplitter(enemy) {
-    context.rotate(-enemy.angle);
-    context.fillStyle = enemy.flash > 0 ? "#fff" : "#657c59";
-    context.strokeStyle = "#263021";
-    context.lineWidth = 4;
-    context.beginPath();
-    for (let point = 0; point < 12; point += 1) {
-      const angle = point / 12 * TAU;
-      const radius = point % 2 ? 14 : 21;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      if (point === 0) context.moveTo(x, y); else context.lineTo(x, y);
+    const pulse = Math.sin(enemy.phase * 5) * 2;
+    context.strokeStyle = "#2a2d20"; context.lineWidth = 4;
+    for (let pod = 0; pod < 3; pod += 1) {
+      const angle = pod / 3 * TAU + .4;
+      const x = Math.cos(angle) * 14;
+      const y = Math.sin(angle) * 12;
+      drawLayeredEllipse(x, y, 13 + pulse * .3, 15 - pulse * .2, angle, enemy.flash > 0 ? "#fff" : pod === 1 ? "#6d8c58" : "#58734e", "#283021", "#b2cf82");
+      context.fillStyle = "#b3d486"; context.globalAlpha = .42; context.beginPath(); context.arc(x - 3, y - 4, 4, 0, TAU); context.fill(); context.globalAlpha = 1;
     }
-    context.closePath(); context.fill(); context.stroke();
-    context.fillStyle = "#90a66d";
-    context.globalAlpha = .45;
-    context.beginPath(); context.arc(-5, -6, 7, 0, TAU); context.fill();
-    context.globalAlpha = 1;
-    context.fillStyle = "#9ab77d";
-    context.globalAlpha = .32;
-    for (const spot of [[-10, 7, 4], [7, -8, 5], [12, 9, 3]]) {
-      context.beginPath(); context.arc(spot[0], spot[1], spot[2], 0, TAU); context.fill();
-    }
-    context.globalAlpha = 1;
-    drawEye(-4, 1, 5, 0, 0, true);
-    drawEye(7, 3, 4, 0, 0, true);
-    context.strokeStyle = "#263021";
-    context.lineWidth = 2;
-    context.beginPath(); context.moveTo(-6, 11); context.quadraticCurveTo(0, 15, 8, 10); context.stroke();
+    context.fillStyle = "#34402c"; context.beginPath(); context.arc(0, 0, 10, 0, TAU); context.fill();
+    drawMaw(2, 1, 8, 7, 5, 0, .8);
+    for (let thorn = 0; thorn < 6; thorn += 1) { const angle = thorn / 6 * TAU; context.fillStyle = "#8eaa67"; context.beginPath(); context.moveTo(Math.cos(angle - .12) * 20, Math.sin(angle - .12) * 20); context.lineTo(Math.cos(angle) * 29, Math.sin(angle) * 29); context.lineTo(Math.cos(angle + .12) * 20, Math.sin(angle + .12) * 20); context.closePath(); context.fill(); }
   }
 
   function drawLeech(enemy) {
-    const wiggle = Math.sin(enemy.phase * 7) * 4;
-    context.rotate(-enemy.angle);
-    context.strokeStyle = "#2b171d";
-    context.lineWidth = 15;
-    context.lineCap = "round";
-    context.beginPath(); context.moveTo(-16, wiggle); context.quadraticCurveTo(0, -wiggle, 15, 0); context.stroke();
-    context.strokeStyle = enemy.flash > 0 ? "#fff" : "#9d3948";
-    context.lineWidth = 10;
-    context.stroke();
-    context.fillStyle = "#28151c";
-    context.beginPath(); context.ellipse(14, 0, 8, 7, 0, 0, TAU); context.fill();
-    context.fillStyle = "#ead7b1";
-    for (let index = -1; index <= 1; index += 1) {
-      context.beginPath(); context.moveTo(11, index * 3); context.lineTo(18, index * 3 - 2); context.lineTo(18, index * 3 + 2); context.fill();
+    const wiggle = Math.sin(enemy.phase * 7) * 5;
+    for (let segment = 4; segment >= 0; segment -= 1) {
+      const x = -17 + segment * 8;
+      const y = Math.sin(enemy.phase * 7 + segment * .8) * 4;
+      drawChitinSegment(x, y, 8 + segment * .45, 7, segment % 2 ? .18 : -.18, enemy.flash > 0 ? "#fff" : `rgb(${138 + segment * 7}, ${45 + segment * 3}, ${61 + segment * 4})`, "#d87b79");
     }
-    context.fillStyle = "#d86266";
-    context.beginPath(); context.arc(-15, wiggle, 4, 0, TAU); context.fill();
+    context.fillStyle = "#29151c"; context.strokeStyle = "#421d29"; context.lineWidth = 3;
+    context.beginPath(); context.ellipse(24, 0, 10, 9, 0, 0, TAU); context.fill(); context.stroke();
+    for (let tooth = 0; tooth < 6; tooth += 1) { const angle = tooth / 6 * TAU; drawFang(24 + Math.cos(angle) * 6, Math.sin(angle) * 5, 6, 3.5, angle - Math.PI / 2); }
+    context.fillStyle = "#b23c53"; context.beginPath(); context.arc(24, 0, 3, 0, TAU); context.fill();
+    drawVein(-17, wiggle, -5, -8, 17, 0, "#e16d72", 2);
   }
 
   function drawCultist(enemy) {
     context.rotate(-enemy.angle);
     const sway = Math.sin(enemy.phase * 3) * 2;
-    drawLimb(-8, 9, -13, 20 + sway, 6, "#77628b");
-    drawLimb(7, 9, 12, 20 - sway, 6, "#77628b");
-    context.fillStyle = enemy.flash > 0 ? "#fff" : "#4c3a5e";
-    context.strokeStyle = "#241927";
-    context.lineWidth = 4;
-    context.beginPath(); context.moveTo(0, -23); context.quadraticCurveTo(-22, -4, -18, 21); context.lineTo(18, 21); context.quadraticCurveTo(22, -4, 0, -23); context.fill(); context.stroke();
-    context.fillStyle = "#211821";
-    context.beginPath(); context.ellipse(0, -5, 12, 10, 0, 0, TAU); context.fill();
-    drawEye(0, -5, 7, Math.cos(enemy.angle) * 2, Math.sin(enemy.angle) * 2, true);
-    context.strokeStyle = "#b89ad2";
-    context.lineWidth = 2;
-    context.beginPath(); context.arc(0, 12, 6, 0, TAU); context.stroke();
-    context.beginPath(); context.moveTo(-5, 12); context.lineTo(5, 12); context.moveTo(0, 7); context.lineTo(0, 17); context.stroke();
+    context.fillStyle = enemy.flash > 0 ? "#fff" : "#433250"; context.strokeStyle = "#221824"; context.lineWidth = 4;
+    context.beginPath(); context.moveTo(0, -29); context.quadraticCurveTo(-25, -12, -20, 23); context.lineTo(-7, 18); context.lineTo(0, 29); context.lineTo(8, 18); context.lineTo(21, 23); context.quadraticCurveTo(25, -11, 0, -29); context.closePath(); context.fill(); context.stroke();
+    context.fillStyle = "#17131b"; context.beginPath(); context.ellipse(0, -8, 13, 12, 0, 0, TAU); context.fill();
+    drawRimmedEye(0, -8, 7, 5, 2, 0, "#8f65bc", "#d9c8e9");
+    context.strokeStyle = "#b99bd3"; context.lineWidth = 2.5;
+    context.beginPath(); context.arc(0, 11, 7, 0, TAU); context.moveTo(-6, 11); context.lineTo(6, 11); context.moveTo(0, 5); context.lineTo(0, 18); context.stroke();
+    for (const side of [-1, 1]) {
+      drawLimb(side * 10, 1, side * 24, 7 + sway * side, 5, "#745d87");
+      context.fillStyle = "#b6a2c8"; context.beginPath(); context.arc(side * 26, 8 + sway * side, 4, 0, TAU); context.fill();
+      context.strokeStyle = "#a77bd0"; context.globalAlpha = .5; context.beginPath(); context.arc(side * 27, 8 + sway * side, 8, 0, TAU); context.stroke(); context.globalAlpha = 1;
+    }
   }
 
   function drawBomber(enemy) {
     context.rotate(-enemy.angle);
-    drawLimb(-9, 11, -15, 22, 7, "#88654b");
-    drawLimb(8, 11, 14, 22, 7, "#88654b");
-    drawBlob(22, 12, enemy.id * 5, enemy.flash > 0 ? "#fff" : "#76513f", "#291c1d", 5);
-    drawFleshTexture(20, enemy.id * 17, "#3e2525");
-    context.fillStyle = "#241a1d";
-    context.beginPath(); context.arc(5, 1, 12, 0, TAU); context.fill();
-    context.fillStyle = "#d7ab59";
-    context.beginPath(); context.arc(5, 1, 7, 0, TAU); context.fill();
-    context.fillStyle = "#392329";
-    context.beginPath(); context.arc(7, 1, 3, 0, TAU); context.fill();
-    context.strokeStyle = "#d66343";
-    context.lineWidth = 3;
-    context.beginPath(); context.moveTo(-8, -13); context.quadraticCurveTo(-18, -25, -7, -31); context.stroke();
-    context.fillStyle = "#f5cf68";
-    context.beginPath(); context.arc(-7, -31, 3, 0, TAU); context.fill();
+    const fusePulse = .5 + Math.sin(enemy.phase * 10) * .5;
+    drawLimb(-10, 11, -17, 24, 8, "#74523e");
+    drawLimb(8, 11, 14, 23, 8, "#74523e");
+    context.fillStyle = "#2a2022"; context.strokeStyle = "#171215"; context.lineWidth = 4;
+    context.beginPath(); context.arc(-16, -1, 18, 0, TAU); context.fill(); context.stroke();
+    context.strokeStyle = "#b56845"; context.lineWidth = 3; context.beginPath(); context.arc(-16, -1, 12, 0, TAU); context.stroke();
+    drawLayeredEllipse(3, 2, 23, 20, .05, enemy.flash > 0 ? "#fff" : "#76503e", "#291b1d", "#bd8261");
+    drawBonePlate(1, -6, 19, 16, -.1, true, "#a48762");
+    drawRimmedEye(10, -7, 5, 4, 2, 0, "#c84835", "#dfc99e");
+    context.fillStyle = "#25161b"; context.beginPath(); context.ellipse(13, 8, 8, 6, 0, 0, TAU); context.fill();
+    context.fillStyle = "#d8b059"; context.beginPath(); context.arc(-16, -1, 7, 0, TAU); context.fill();
+    context.fillStyle = "#4a2b2d"; context.beginPath(); context.arc(-14, -1, 3, 0, TAU); context.fill();
+    drawVein(-12, -15, -24, -25, -10, -35, "#d25b3f", 2.5);
+    context.fillStyle = fusePulse > .45 ? "#fff0a1" : "#ef7046"; context.shadowColor = "#ff5b38"; context.shadowBlur = 10;
+    context.beginPath(); context.arc(-10, -35, 4 + fusePulse * 2, 0, TAU); context.fill(); context.shadowBlur = 0;
+  }
+
+  function drawBossSpines(count, radius, length, fill, rotation = 0) {
+    context.save();
+    context.rotate(rotation);
+    context.fillStyle = fill;
+    context.strokeStyle = "#2a1c22";
+    context.lineWidth = 2.5;
+    for (let index = 0; index < count; index += 1) {
+      const angle = index / count * TAU;
+      context.beginPath();
+      context.moveTo(Math.cos(angle - .13) * radius, Math.sin(angle - .13) * radius);
+      context.lineTo(Math.cos(angle) * (radius + length * (index % 2 ? .78 : 1)), Math.sin(angle) * (radius + length * (index % 2 ? .78 : 1)));
+      context.lineTo(Math.cos(angle + .13) * radius, Math.sin(angle + .13) * radius);
+      context.closePath(); context.fill(); context.stroke();
+    }
+    context.restore();
+  }
+
+  function drawCoilForm(enemy, stage) {
+    const flesh = enemy.flash > 0 ? "#fff" : stage === 1 ? "#8c6846" : stage === 2 ? "#766348" : "#67564d";
+    if (stage === 1) {
+      for (let segment = 5; segment >= 1; segment -= 1) {
+        const wave = Math.sin(enemy.phase * 4 + segment * .8) * 7;
+        drawChitinSegment(-segment * 19, wave, 17 - segment * .6, 14 - segment * .45, wave * .01, flesh, "#b7945d");
+      }
+      drawLayeredEllipse(3, 0, 30, 24, 0, flesh, "#30231f", "#d4ab71");
+      drawBonePlate(-5, -17, 20, 12, -.2, false, "#b99a68");
+      drawRimmedEye(9, -8, 7, 5, 2, 0, "#879f3b");
+      drawMaw(20, 7, 12, 8, 5, .04, .85);
+      for (const side of [-1, 1]) drawFang(30, side * 7, 16, 6, -Math.PI / 2 + side * .42);
+    } else if (stage === 2) {
+      context.save(); context.globalAlpha = .26; context.strokeStyle = "#d7c28d"; context.lineWidth = 4;
+      context.beginPath(); context.moveTo(-108, 18); context.bezierCurveTo(-61, -32, -23, 30, 12, -13); context.stroke();
+      for (let ring = 0; ring < 6; ring += 1) { context.beginPath(); context.ellipse(-96 + ring * 19, Math.sin(enemy.phase * 4 + ring) * 12 + 12, 15, 11, 0, 0, TAU); context.stroke(); }
+      context.restore();
+      for (let segment = 6; segment >= 1; segment -= 1) {
+        const wave = Math.sin(enemy.phase * 4.6 + segment * .72) * 12;
+        drawChitinSegment(-segment * 20, wave, 18, 14, wave * .012, flesh, "#a7b466", segment % 2 === 0);
+        if (segment % 2 === 0) drawBonePlate(-segment * 20, wave - 15, 11, 19, 0, true, "#b9ae7a");
+      }
+      drawLayeredEllipse(7, 0, 34, 27, 0, flesh, "#2d2420", "#bac77a");
+      drawRimmedEye(9, -11, 8, 5, 2, 0, "#759f31");
+      drawMaw(23, 7, 15, 10, 7, 0, 1);
+      drawFang(26, -13, 22, 7, -Math.PI / 2 + .2); drawFang(26, 14, 22, 7, -Math.PI / 2 - .2);
+    } else {
+      for (let segment = 6; segment >= 2; segment -= 1) {
+        const wave = Math.sin(enemy.phase * 6 + segment) * 14;
+        drawChitinSegment(-segment * 18, wave, 17, 12, segment % 2 ? .28 : -.28, flesh, "#d1c18d", true);
+        drawBonePlate(-segment * 18, wave - 14, 12, 21, segment % 2 ? -.2 : .2, true, "#c9bd91");
+      }
+      context.fillStyle = "#3c2529"; context.strokeStyle = "#23191d"; context.lineWidth = 5;
+      context.beginPath(); context.moveTo(-24, -20); context.lineTo(2, -32); context.lineTo(29, -21); context.lineTo(17, 0); context.lineTo(29, 21); context.lineTo(1, 33); context.lineTo(-25, 19); context.lineTo(-10, 0); context.closePath(); context.fill(); context.stroke();
+      for (const side of [-1, 0, 1]) {
+        const y = side * 24;
+        drawLayeredEllipse(28, y, 25, 17, side * .28, flesh, "#2b2020", "#d2c68d");
+        drawRimmedEye(32, y - 5, 6, 4, 2, 0, "#7fa530");
+        drawMaw(43, y + 5, 11, 6, 4, side * .18, 1);
+      }
+      drawBossSpines(8, 31, 15, "#c8bb8a", enemy.phase * .08);
+    }
+  }
+
+  function drawHopperForm(enemy, stage) {
+    const flesh = enemy.flash > 0 ? "#fff" : stage === 1 ? "#a25755" : stage === 2 ? "#95504e" : "#873f45";
+    context.rotate(-enemy.angle);
+    if (stage === 1) {
+      for (const side of [-1, 1]) {
+        drawLimb(side * 18, 12, side * 36, 31, 13, "#7d4547");
+        drawLayeredEllipse(side * 39, 32, 17, 9, side * .12, flesh, "#321e24", "#df8373");
+      }
+      drawLayeredEllipse(0, 5, 39, 31, 0, flesh, "#382028", "#df7f72");
+      drawLayeredEllipse(-15, -23, 16, 13, -.2, flesh, "#382028", "#e09a82");
+      drawLayeredEllipse(16, -23, 16, 13, .2, flesh, "#382028", "#e09a82");
+      drawRimmedEye(-15, -25, 7, 6, 0, 1, "#ca563d"); drawRimmedEye(16, -25, 7, 6, 0, 1, "#ca563d");
+      drawMaw(0, 10, 22, 11, 8, 0, .65);
+    } else if (stage === 2) {
+      for (const side of [-1, 1]) {
+        drawLimb(side * 16, 12, side * 30, 48, 13, "#783e43");
+        drawLimb(side * 30, 48, side * 53, 56, 11, "#6c3a3d");
+        drawBonePlate(side * 31, 42, 17, 22, side * .28, true, "#a77d63");
+      }
+      drawLayeredEllipse(0, -3, 33, 43, 0, flesh, "#351d25", "#db766d");
+      context.fillStyle = "#5d2732"; context.beginPath(); context.ellipse(0, 14, 25, 18, 0, 0, TAU); context.fill();
+      drawRimmedEye(-13, -22, 8, 6, 1, 1, "#df6e3f"); drawRimmedEye(14, -22, 8, 6, -1, 1, "#df6e3f");
+      drawMaw(0, 10, 21, 16, 10, 0, 1.1);
+      for (const side of [-1, 1]) drawVein(side * 7, -36, side * 20, -48, side * 17, -58, "#dd765f", 3);
+    } else {
+      for (const side of [-1, 1]) {
+        drawLimb(side * 20, 9, side * 43, 48, 18, "#6e323b");
+        drawLimb(side * 43, 48, side * 67, 57, 15, "#5b2b33");
+        drawBonePlate(side * 45, 45, 24, 29, side * .35, true, "#b38b6d");
+      }
+      context.fillStyle = flesh; context.strokeStyle = "#351b24"; context.lineWidth = 6;
+      context.beginPath(); context.moveTo(-43, -28); context.quadraticCurveTo(0, -58, 43, -28); context.lineTo(35, 28); context.lineTo(0, 48); context.lineTo(-36, 27); context.closePath(); context.fill(); context.stroke();
+      context.strokeStyle = "#4f242e"; context.lineWidth = 4; context.beginPath(); context.moveTo(-31, -23); context.lineTo(-8, -4); context.lineTo(-19, 23); context.moveTo(31, -23); context.lineTo(9, -3); context.lineTo(21, 23); context.stroke();
+      drawRimmedEye(-18, -21, 9, 6, 1, 1, "#ff7145"); drawRimmedEye(18, -21, 9, 6, -1, 1, "#ff7145");
+      drawMaw(0, 14, 28, 18, 12, 0, 1.18);
+      drawBossSpines(7, 42, 18, "#b68569", Math.PI / 2);
+    }
+  }
+
+  function drawDevourerForm(enemy, stage) {
+    const flesh = enemy.flash > 0 ? "#fff" : stage === 1 ? "#835044" : stage === 2 ? "#713b3b" : "#612b35";
+    if (stage === 1) {
+      for (let segment = 4; segment >= 1; segment -= 1) {
+        const y = Math.sin(enemy.phase * 3.5 + segment) * 7;
+        drawLayeredEllipse(-segment * 20, y, 19, 15, y * .015, flesh, "#301d1d", "#c17763");
+        drawFang(-segment * 20, y - 13, 9, 5, Math.PI, "#cdbb88");
+      }
+      drawLayeredEllipse(4, 0, 34, 28, 0, flesh, "#321c20", "#d08a71");
+      drawRimmedEye(-2, -11, 7, 5, 2, 1, "#9e4137");
+      drawMaw(22, 3, 18, 20, 9, 0, 1);
+    } else if (stage === 2) {
+      for (const side of [-1, 1]) {
+        drawVein(-20, side * 10, -52, side * 34, -76, side * 24, "#9e4e45", 8);
+        drawLayeredEllipse(-69, side * 24, 18, 13, side * .2, flesh, "#301c20", "#b76b5d");
+      }
+      drawLayeredEllipse(-14, 0, 37, 34, 0, flesh, "#301a20", "#bd6b5b");
+      context.fillStyle = "#4b232a"; context.beginPath(); context.arc(9, 0, 36, 0, TAU); context.fill();
+      drawMaw(12, 0, 31, 31, 13, 0, 1);
+      context.fillStyle = "#d79772"; context.globalAlpha = .45; context.beginPath(); context.arc(-23, -12, 10, 0, TAU); context.fill(); context.globalAlpha = 1;
+      drawRimmedEye(-23, -13, 7, 5, 2, 0, "#be523b");
+    } else {
+      context.fillStyle = flesh; context.strokeStyle = "#2d1820"; context.lineWidth = 5;
+      for (let petal = 0; petal < 4; petal += 1) {
+        const angle = petal / 4 * TAU;
+        context.save(); context.rotate(angle);
+        context.beginPath(); context.moveTo(4, -9); context.quadraticCurveTo(52, -41, 62, 0); context.quadraticCurveTo(48, 38, 4, 9); context.closePath(); context.fill(); context.stroke();
+        for (let tooth = 0; tooth < 5; tooth += 1) drawFang(13 + tooth * 9, -7, 12, 5, Math.PI / 2, "#e4d19e");
+        context.restore();
+      }
+      context.fillStyle = "#21131a"; context.beginPath(); context.arc(0, 0, 25, 0, TAU); context.fill();
+      context.fillStyle = "#dc5264"; context.shadowColor = "#ff6a7d"; context.shadowBlur = 16; context.beginPath(); context.arc(0, 0, 9 + Math.sin(enemy.phase * 5) * 2, 0, TAU); context.fill(); context.shadowBlur = 0;
+      for (let eye = 0; eye < 4; eye += 1) { const angle = eye / 4 * TAU + Math.PI / 4; drawRimmedEye(Math.cos(angle) * 42, Math.sin(angle) * 42, 7, 5, Math.cos(angle) * 2, Math.sin(angle) * 2, "#c44f45"); }
+    }
+  }
+
+  function drawIdolForm(enemy, stage) {
+    context.rotate(-enemy.angle);
+    if (stage === 1) {
+      context.fillStyle = enemy.flash > 0 ? "#fff" : "#65584a"; context.strokeStyle = "#28221f"; context.lineWidth = 6;
+      context.beginPath(); context.moveTo(-29, 38); context.lineTo(-37, -21); context.lineTo(-16, -47); context.lineTo(15, -47); context.lineTo(38, -20); context.lineTo(28, 38); context.closePath(); context.fill(); context.stroke();
+      drawBonePlate(0, -28, 38, 24, 0, true, "#95836b");
+      context.fillStyle = "#211a1a"; roundedRect(-22, -10, 44, 15, 6); context.fill();
+      drawRimmedEye(0, -3, 13, 6, 0, 1, "#8f6847", "#d0c5a4");
+      context.strokeStyle = "#a68e6c"; context.lineWidth = 3; context.beginPath(); context.moveTo(-18, 17); context.lineTo(0, 31); context.lineTo(19, 17); context.stroke();
+    } else if (stage === 2) {
+      context.fillStyle = "#554638"; context.strokeStyle = "#271f1d"; context.lineWidth = 6;
+      context.beginPath(); context.moveTo(-45, 35); context.lineTo(-34, -21); context.lineTo(0, -49); context.lineTo(35, -20); context.lineTo(46, 35); context.closePath(); context.fill(); context.stroke();
+      for (let egg = 0; egg < 6; egg += 1) {
+        const angle = egg / 6 * TAU + .2;
+        drawLayeredEllipse(Math.cos(angle) * 35, Math.sin(angle) * 30 + 4, 13, 17, angle, enemy.flash > 0 ? "#fff" : "#795b72", "#342331", "#c598c1");
+        drawRimmedEye(Math.cos(angle) * 35, Math.sin(angle) * 30 + 4, 4, 3, 0, 0, "#8f63b1", "#dbcce3");
+      }
+      context.fillStyle = "#21191f"; context.beginPath(); context.arc(0, 1, 23, 0, TAU); context.fill();
+      drawRimmedEye(0, 0, 14, 9, 0, 1, "#8b62b5", "#d9c9df");
+      drawVein(0, 13, -5, 31, 0, 47, "#9a6c8e", 5);
+    } else {
+      context.fillStyle = enemy.flash > 0 ? "#fff" : "#6d4668"; context.strokeStyle = "#2b1d2b"; context.lineWidth = 5;
+      for (let petal = 0; petal < 7; petal += 1) {
+        const angle = petal / 7 * TAU - Math.PI / 2;
+        context.save(); context.rotate(angle);
+        context.beginPath(); context.moveTo(-10, 5); context.quadraticCurveTo(-19, -39, 0, -66); context.quadraticCurveTo(21, -39, 10, 5); context.closePath(); context.fill(); context.stroke();
+        drawRimmedEye(0, -39, 6, 4, 0, -1, "#a978c9", "#e0d1e5");
+        context.restore();
+      }
+      context.fillStyle = "#251726"; context.beginPath(); context.arc(0, 0, 30, 0, TAU); context.fill();
+      drawRimmedEye(0, 0, 20, 13, 0, 1, "#a06ec4", "#e3d8e6");
+      context.strokeStyle = "#d2a9e7"; context.globalAlpha = .55; context.lineWidth = 3; context.beginPath(); context.arc(0, 0, 39 + Math.sin(enemy.phase * 3) * 3, 0, TAU); context.stroke(); context.globalAlpha = 1;
+    }
+  }
+
+  function drawPeepForm(enemy, stage) {
+    const flesh = enemy.flash > 0 ? "#fff" : stage === 1 ? "#a86e52" : stage === 2 ? "#895247" : "#673843";
+    context.rotate(-enemy.angle);
+    if (stage === 1) {
+      drawLayeredEllipse(0, 2, 39, 34, 0, flesh, "#3a2426", "#df9b75");
+      for (const side of [-1, 1]) {
+        drawLayeredEllipse(side * 25, -18, 16, 14, side * .18, "#7e4143", "#392129", "#d97f70");
+        drawRimmedEye(side * 25, -19, 11, 8, side, 1, "#3e8da8", "#e7dfc9");
+        drawVein(side * 22, -7, side * 27, 9, side * 20, 26, "#c05b5d", 3);
+      }
+      drawMaw(0, 16, 15, 8, 6, 0, .8);
+      context.fillStyle = "#72c8da"; context.globalAlpha = .7;
+      for (const side of [-1, 1]) { context.beginPath(); context.ellipse(side * 28, 3, 4, 9 + Math.sin(enemy.phase * 5 + side) * 2, side * .08, 0, TAU); context.fill(); }
+      context.globalAlpha = 1;
+    } else if (stage === 2) {
+      context.fillStyle = flesh; context.strokeStyle = "#342027"; context.lineWidth = 6;
+      context.beginPath(); context.moveTo(-40, -15); context.quadraticCurveTo(-31, -44, 0, -42); context.quadraticCurveTo(34, -44, 42, -13); context.lineTo(34, 34); context.lineTo(0, 48); context.lineTo(-35, 33); context.closePath(); context.fill(); context.stroke();
+      for (const side of [-1, 1]) {
+        context.fillStyle = "#24161d"; context.beginPath(); context.ellipse(side * 18, -11, 13, 12, 0, 0, TAU); context.fill();
+        drawVein(side * 16, 0, side * 32, 22, side * 45, 34, "#bb5159", 4);
+        context.fillStyle = "#65cde2"; context.globalAlpha = .7; context.beginPath(); context.ellipse(side * 45, 37, 6, 12, side * .15, 0, TAU); context.fill(); context.globalAlpha = 1;
+      }
+      drawMaw(0, 18, 18, 12, 7, 0, .9);
+      drawBonePlate(0, -33, 30, 15, 0, true, "#b99e80");
+    } else {
+      context.fillStyle = "#422632"; context.strokeStyle = "#281a22"; context.lineWidth = 6;
+      context.beginPath(); context.arc(0, 0, 35, 0, TAU); context.fill(); context.stroke();
+      drawBossSpines(9, 34, 21, "#925363", enemy.phase * .12);
+      context.fillStyle = "#17131b"; context.beginPath(); context.arc(0, 0, 21, 0, TAU); context.fill();
+      drawRimmedEye(0, 0, 15, 12, 0, 1, "#45a9c7", "#dff5f1");
+      for (let eye = 0; eye < 4; eye += 1) {
+        const angle = enemy.phase * .55 + eye / 4 * TAU;
+        const x = Math.cos(angle) * 61;
+        const y = Math.sin(angle) * 46;
+        drawVein(Math.cos(angle) * 31, Math.sin(angle) * 25, Math.cos(angle + .25) * 46, Math.sin(angle + .25) * 38, x, y, "#a94359", 3);
+        drawRimmedEye(x, y, 12, 8, -Math.cos(angle) * 2, -Math.sin(angle) * 2, "#3a9fbd", "#e6eee0");
+      }
+    }
+  }
+
+  function drawMatronForm(enemy, stage) {
+    context.rotate(-enemy.angle);
+    const flesh = enemy.flash > 0 ? "#fff" : stage === 1 ? "#8e4052" : stage === 2 ? "#7a344a" : "#65243f";
+    if (stage === 1) {
+      context.fillStyle = "#37232a"; context.strokeStyle = "#1f161b"; context.lineWidth = 7;
+      roundedRect(-43, -55, 86, 110, 17); context.fill(); context.stroke();
+      context.strokeStyle = "#7c3a4a"; context.lineWidth = 8; roundedRect(-32, -43, 64, 87, 14); context.stroke();
+      drawLayeredEllipse(0, 0, 28, 36, 0, flesh, "#351c28", "#ce6a7c");
+      drawRimmedEye(0, -9, 14, 10, 0, 1, "#b83257", "#e2d4c5");
+      drawMaw(0, 18, 15, 9, 6, 0, .8);
+      context.fillStyle = "#b88d72"; for (let nail = -2; nail <= 2; nail += 1) { context.beginPath(); context.arc(nail * 15, -50, 3, 0, TAU); context.fill(); }
+    } else if (stage === 2) {
+      context.fillStyle = "#412533"; context.strokeStyle = "#21151c"; context.lineWidth = 6;
+      context.beginPath(); context.moveTo(-38, -55); context.lineTo(37, -55); context.lineTo(48, 52); context.lineTo(0, 66); context.lineTo(-49, 52); context.closePath(); context.fill(); context.stroke();
+      drawLayeredEllipse(0, -8, 31, 38, 0, flesh, "#351925", "#cf627b");
+      drawRimmedEye(0, -20, 15, 11, 0, 1, "#c0345b", "#e4d2c4");
+      drawMaw(0, 14, 17, 12, 7, 0, 1);
+      for (const side of [-1, 1]) {
+        drawLimb(side * 31, -6, side * 62, 12, 18, flesh);
+        drawLayeredEllipse(side * 67, 14, 20, 27, side * .2, flesh, "#351925", "#d5657b");
+        for (let finger = -2; finger <= 2; finger += 1) drawLimb(side * 73, 5 + finger * 6, side * (88 + Math.abs(finger) * 2), 5 + finger * 8, 4, "#a94b64");
+      }
+      drawVein(-20, 36, 0, 50, 20, 35, "#ba4965", 4);
+    } else {
+      context.fillStyle = "#321b29"; context.strokeStyle = "#1c1219"; context.lineWidth = 7;
+      context.beginPath(); context.moveTo(-42, -64); context.lineTo(42, -64); context.lineTo(57, 45); context.lineTo(22, 65); context.lineTo(0, 54); context.lineTo(-23, 66); context.lineTo(-58, 44); context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = flesh; context.beginPath(); context.ellipse(0, -11, 36, 43, 0, 0, TAU); context.fill(); context.stroke();
+      drawRimmedEye(0, -24, 18, 12, 0, 1, "#da2e60", "#f0d8cb");
+      drawMaw(0, 16, 21, 15, 9, 0, 1.08);
+      const handPositions = [[-48, -22, -.3], [48, -22, .3], [-55, 35, .38], [55, 35, -.38]];
+      for (const [x, y, rotation] of handPositions) {
+        drawLimb(x * .55, y * .55, x, y, 17, flesh);
+        drawLayeredEllipse(x, y, 22, 28, rotation, flesh, "#351723", "#df617d");
+        for (let finger = -2; finger <= 2; finger += 1) drawLimb(x + Math.sign(x) * 7, y + finger * 5, x + Math.sign(x) * (25 + Math.abs(finger) * 3), y + finger * 8, 4, "#9d3c5b");
+      }
+      context.strokeStyle = "#ed6f92"; context.globalAlpha = .5; context.lineWidth = 3; context.beginPath(); context.arc(0, -8, 48 + Math.sin(enemy.phase * 4) * 3, 0, TAU); context.stroke(); context.globalAlpha = 1;
+    }
+  }
+
+  function drawHollowForm(enemy, stage) {
+    const bone = enemy.flash > 0 ? "#fff" : stage === 1 ? "#a99bbb" : stage === 2 ? "#9180a8" : "#75648e";
+    if (stage === 1) {
+      for (let segment = 6; segment >= 1; segment -= 1) {
+        const y = Math.sin(enemy.phase * 5 + segment * .8) * 8;
+        drawBonePlate(-segment * 18, y, 23, 18, y * .018, false, bone);
+        context.fillStyle = "#4a3d59"; context.beginPath(); context.arc(-segment * 18, y, 5, 0, TAU); context.fill();
+      }
+      drawLayeredEllipse(5, 0, 31, 24, 0, "#5d4d6e", "#292132", "#a994bd");
+      drawBonePlate(11, -5, 32, 29, 0, false, bone);
+      drawRimmedEye(14, -8, 7, 5, 2, 0, "#8f72b6", "#e0d8d8");
+      drawMaw(22, 7, 13, 8, 6, 0, .8);
+    } else if (stage === 2) {
+      const fragments = [[-94, 11], [-64, -8], [-28, 10], [16, -4]];
+      fragments.forEach(([x, y], index) => {
+        context.save(); context.globalAlpha = index % 2 ? .7 : 1;
+        drawBonePlate(x, y + Math.sin(enemy.phase * 6 + index) * 5, 29 - index * 2, 21, index % 2 ? .3 : -.25, true, bone);
+        context.restore();
+      });
+      for (let link = 0; link < fragments.length - 1; link += 1) drawVein(fragments[link][0] + 12, fragments[link][1], (fragments[link][0] + fragments[link + 1][0]) / 2, link % 2 ? 20 : -20, fragments[link + 1][0] - 12, fragments[link + 1][1], "#8069a1", 3);
+      drawLayeredEllipse(34, 0, 29, 25, 0, "#554263", "#281f31", "#9c83ba");
+      drawBonePlate(39, -5, 31, 31, 0, true, bone);
+      drawRimmedEye(42, -8, 7, 5, 2, 0, "#9975c9");
+      drawMaw(52, 8, 12, 8, 5, 0, 1);
+    } else {
+      context.save(); context.globalAlpha = .24;
+      for (const offset of [-1, 1]) {
+        for (let segment = 5; segment >= 0; segment -= 1) drawBonePlate(-segment * 20, offset * 25 + Math.sin(enemy.phase * 8 + segment) * 9, 24, 17, offset * .2, true, "#9c88be");
+      }
+      context.restore();
+      for (let segment = 6; segment >= 1; segment -= 1) {
+        const y = Math.sin(enemy.phase * 8 + segment * .9) * 13;
+        drawBonePlate(-segment * 18, y, 26, 20, segment % 2 ? .34 : -.34, true, bone);
+        drawFang(-segment * 18, y - 13, 11, 5, Math.PI, "#d8cdea");
+      }
+      drawLayeredEllipse(10, 0, 34, 27, 0, "#4e385e", "#251b2d", "#a480c5");
+      drawBossSpines(7, 30, 18, "#aa91ce", enemy.phase * .15);
+      drawRimmedEye(19, -8, 9, 6, 2, 0, "#b180dc", "#ede4ef");
+      drawMaw(29, 9, 15, 10, 7, 0, 1.05);
+    }
+  }
+
+  function drawHeartForm(enemy, stage) {
+    context.rotate(-enemy.angle);
+    const beat = 1 + Math.max(0, Math.sin(enemy.phase * (stage + 3))) * (stage === 3 ? .12 : .06);
+    context.scale(beat, beat);
+    if (stage === 1) {
+      context.fillStyle = "#49323a"; context.strokeStyle = "#25191e"; context.lineWidth = 6;
+      context.beginPath(); context.ellipse(0, 2, 42, 50, 0, 0, TAU); context.fill(); context.stroke();
+      for (const side of [-1, 1]) {
+        for (let rib = 0; rib < 4; rib += 1) {
+          context.strokeStyle = "#b7a482"; context.lineWidth = 5;
+          context.beginPath(); context.moveTo(side * 5, -31 + rib * 17); context.quadraticCurveTo(side * (31 + rib * 2), -29 + rib * 15, side * 34, -10 + rib * 15); context.stroke();
+        }
+      }
+      context.fillStyle = "#8e354b"; context.beginPath(); context.arc(-12, -6, 19, Math.PI, 0); context.arc(12, -6, 19, Math.PI, 0); context.lineTo(0, 31); context.closePath(); context.fill();
+      drawRimmedEye(0, -7, 8, 6, 0, 1, "#bb3150", "#dfc8bc");
+    } else if (stage === 2) {
+      for (const [x, y, cx, cy] of [[-13,-28,-36,-53],[13,-28,37,-52],[-21,8,-55,24],[21,8,55,25]]) drawVein(x, y, cx, cy, cx * 1.25, cy * 1.2, "#b94a61", 6);
+      context.fillStyle = enemy.flash > 0 ? "#fff" : "#a83d55"; context.strokeStyle = "#371c28"; context.lineWidth = 6;
+      context.beginPath(); context.arc(-20, -9, 26, Math.PI, 0); context.arc(20, -9, 26, Math.PI, 0); context.lineTo(0, 46); context.closePath(); context.fill(); context.stroke();
+      drawFleshTexture(42, enemy.id * 41, "#5b2033");
+      drawVein(0, -34, -5, 5, 8, 31, "#e07884", 3);
+      drawRimmedEye(-12, -10, 7, 5, 0, 1, "#d23657"); drawRimmedEye(13, -9, 7, 5, 0, 1, "#d23657");
+      drawMaw(0, 17, 12, 7, 5, 0, .75);
+    } else {
+      for (let vein = 0; vein < 8; vein += 1) { const angle = vein / 8 * TAU; drawVein(Math.cos(angle) * 18, Math.sin(angle) * 18, Math.cos(angle + .25) * 46, Math.sin(angle + .25) * 46, Math.cos(angle) * 72, Math.sin(angle) * 72, "#dc496a", 5); }
+      for (let lobe = 0; lobe < 4; lobe += 1) {
+        const angle = lobe / 4 * TAU + Math.PI / 4;
+        context.save(); context.rotate(angle);
+        drawLayeredEllipse(0, -33, 23, 36, 0, enemy.flash > 0 ? "#fff" : lobe % 2 ? "#a42f4f" : "#be3857", "#341923", "#ed7584");
+        drawMaw(0, -42, 10, 7, 4, 0, .8);
+        context.restore();
+      }
+      context.fillStyle = "#21131a"; context.strokeStyle = "#4a1d2d"; context.lineWidth = 5; context.beginPath(); context.arc(0, 0, 25, 0, TAU); context.fill(); context.stroke();
+      context.fillStyle = "#ff557b"; context.shadowColor = "#ff315f"; context.shadowBlur = 22; context.beginPath(); context.arc(0, 0, 12 + Math.sin(enemy.phase * 8) * 3, 0, TAU); context.fill(); context.shadowBlur = 0;
+    }
+  }
+
+  function drawBloatForm(enemy, stage) {
+    const flesh = enemy.flash > 0 ? "#fff" : stage === 1 ? "#703849" : stage === 2 ? "#642c40" : "#542037";
+    if (stage === 1) {
+      for (const side of [-1, 1]) {
+        drawLimb(side * 15, 16, side * 31, 31, 11, "#59303d");
+        drawLimb(side * 20, -9, side * 38, -18, 9, "#59303d");
+      }
+      drawLayeredEllipse(0, 4, 41, 33, -.05, flesh, "#301925", "#b35b6a");
+      context.fillStyle = "#3b1b29"; context.beginPath(); context.ellipse(-13, -8, 11, 8, 0, 0, TAU); context.ellipse(13, -8, 11, 8, 0, 0, TAU); context.fill();
+      drawMaw(2, 16, 17, 10, 7, 0, .8);
+      context.fillStyle = "#6ca6a8"; context.globalAlpha = .45;
+      for (const bubble of [[-28,-18,5],[24,-24,4],[34,4,6]]) { context.beginPath(); context.arc(...bubble, 0, TAU); context.fill(); }
+      context.globalAlpha = 1;
+    } else if (stage === 2) {
+      context.fillStyle = flesh; context.strokeStyle = "#2e1722"; context.lineWidth = 6;
+      context.beginPath(); context.moveTo(-39, -29); context.quadraticCurveTo(0, -52, 39, -28); context.lineTo(34, 39); context.lineTo(0, 50); context.lineTo(-35, 38); context.closePath(); context.fill(); context.stroke();
+      for (const side of [-1, 1]) {
+        drawVein(side * 13, -8, side * 32, -30, side * 53, -26, "#ad4054", 5);
+        drawLayeredEllipse(side * 56, -27, 18, 13, side * .18, "#7b374c", "#321822", "#d76272");
+        drawRimmedEye(side * 58, -27, 12, 8, -side * 2, 1, "#ce3d44", "#e4d7c7");
+      }
+      context.fillStyle = "#27151e"; context.beginPath(); context.ellipse(0, -7, 18, 13, 0, 0, TAU); context.fill();
+      drawMaw(0, 19, 20, 13, 9, 0, 1);
+      drawScar(-20, 14, 24, -.75, "#3d1723"); drawScar(21, 8, 21, .65, "#3d1723");
+    } else {
+      context.fillStyle = flesh; context.strokeStyle = "#29141f"; context.lineWidth = 7;
+      context.beginPath(); context.moveTo(-45, -27); context.lineTo(-31, -53); context.lineTo(0, -43); context.lineTo(31, -54); context.lineTo(46, -25); context.lineTo(38, 43); context.lineTo(0, 56); context.lineTo(-39, 42); context.closePath(); context.fill(); context.stroke();
+      drawBossSpines(8, 43, 15, "#a7455d", enemy.phase * .08);
+      const eyes = [[0,-24],[-29,1],[29,1]];
+      eyes.forEach(([x, y], index) => {
+        drawRimmedEye(x, y, index === 0 ? 15 : 13, index === 0 ? 10 : 9, 0, 1, "#ef4b3f", "#f0ddc2");
+        context.strokeStyle = "#ff755d"; context.globalAlpha = .45; context.lineWidth = 3; context.beginPath(); context.moveTo(x + 8, y); context.lineTo(x + 73, y); context.stroke(); context.globalAlpha = 1;
+      });
+      drawMaw(0, 27, 23, 14, 10, 0, 1.05);
+      for (const side of [-1, 1]) drawVein(side * 17, 9, side * 40, 27, side * 57, 43, "#bc3657", 5);
+    }
+  }
+
+  function drawBurrowForm(enemy, stage) {
+    if (enemy.submerged) {
+      context.fillStyle = "#21191c"; context.beginPath(); context.ellipse(0, 10, 58, 21, 0, 0, TAU); context.fill();
+      context.strokeStyle = stage === 3 ? "#b2f2bd" : "#78b795"; context.lineWidth = 4; context.setLineDash([8, 7]);
+      context.beginPath(); context.ellipse(0, 4, 38 + Math.sin(enemy.phase * 6) * 5, 17, 0, 0, TAU); context.stroke(); context.setLineDash([]);
+      for (let shard = 0; shard < stage + 2; shard += 1) drawBonePlate(-24 + shard * 16, -6 - (shard % 2) * 8, 12, 17, shard % 2 ? .3 : -.3, true, "#739783");
+      return;
+    }
+    const shell = enemy.flash > 0 ? "#fff" : stage === 1 ? "#587568" : stage === 2 ? "#4c6d61" : "#38594f";
+    if (stage === 1) {
+      for (const side of [-1, 1]) for (let leg = 0; leg < 3; leg += 1) drawLimb(-15 + leg * 18, side * 11, -24 + leg * 18, side * (25 + leg * 3), 8, "#456055");
+      drawLayeredEllipse(0, 0, 49, 27, 0, shell, "#24302c", "#8db59b");
+      for (let plate = 0; plate < 4; plate += 1) drawBonePlate(-28 + plate * 18, -8, 23, 28, plate % 2 ? .12 : -.12, false, "#668878");
+      context.fillStyle = "#2a3732"; context.strokeStyle = "#1c2824"; context.lineWidth = 4; context.beginPath(); context.moveTo(31, -18); context.lineTo(55, 0); context.lineTo(31, 18); context.closePath(); context.fill(); context.stroke();
+      drawRimmedEye(35, -5, 7, 5, 2, 0, "#63ad84", "#d5dfbf");
+      for (const side of [-1, 1]) drawFang(50, side * 8, 17, 6, -Math.PI / 2 + side * .35, "#d6cda1");
+    } else if (stage === 2) {
+      for (let segment = 4; segment >= 0; segment -= 1) drawChitinSegment(-54 + segment * 19, Math.sin(enemy.phase * 5 + segment) * 5, 20, 17, segment % 2 ? .15 : -.15, shell, "#83b293", true);
+      drawLayeredEllipse(37, 0, 32, 24, 0, shell, "#22302a", "#91c2a0");
+      drawBonePlate(40, -7, 34, 28, 0, true, "#72957e");
+      drawRimmedEye(47, -7, 8, 5, 2, 0, "#6ab88d", "#e0e3c7");
+      drawMaw(57, 8, 13, 8, 6, 0, .8);
+      context.strokeStyle = "#8ff0bd"; context.lineWidth = 6; context.shadowColor = "#6fe0a7"; context.shadowBlur = 12;
+      context.beginPath(); context.arc(-64, 0, 17 + Math.sin(enemy.phase * 6) * 2, 0, TAU); context.stroke(); context.shadowBlur = 0;
+      drawBossSpines(6, 23, 15, "#7ba589", 0);
+    } else {
+      for (let segment = 7; segment >= 1; segment -= 1) {
+        const y = Math.sin(enemy.phase * 7 + segment * .72) * 8;
+        drawChitinSegment(-segment * 18, y, 20, 17, segment % 2 ? .22 : -.22, shell, "#9bc4a0", true);
+        drawBonePlate(-segment * 18, y - 17, 14, 22, segment % 2 ? -.2 : .2, true, "#86aa90");
+      }
+      context.fillStyle = "#314b43"; context.strokeStyle = "#1f2d29"; context.lineWidth = 5;
+      context.beginPath(); context.moveTo(-3, -27); context.lineTo(34, -34); context.lineTo(73, 0); context.lineTo(34, 34); context.lineTo(-4, 28); context.lineTo(18, 0); context.closePath(); context.fill(); context.stroke();
+      for (let ridge = 0; ridge < 4; ridge += 1) drawBonePlate(22 + ridge * 12, 0, 18, 30 - ridge * 4, 0, true, "#82a88c");
+      drawRimmedEye(12, -10, 8, 5, 2, 0, "#6fd39a", "#e0e9c7");
+      for (const side of [-1, 1]) drawFang(65, side * 7, 24, 8, -Math.PI / 2 + side * .28, "#d9d3a7");
+      context.strokeStyle = "#a8efb6"; context.lineWidth = 5; context.beginPath(); context.arc(-132, 0, 15, 0, TAU); context.stroke();
+    }
+  }
+
+  function drawInfernalForm(enemy, stage) {
+    context.rotate(-enemy.angle);
+    const flesh = enemy.flash > 0 ? "#fff" : stage === 1 ? "#713b43" : stage === 2 ? "#612d3c" : "#4e2033";
+    if (stage === 1) {
+      context.fillStyle = "#342026"; context.strokeStyle = "#1f151a"; context.lineWidth = 6;
+      context.beginPath(); context.moveTo(-43, 34); context.lineTo(-29, -13); context.lineTo(0, -40); context.lineTo(30, -13); context.lineTo(44, 34); context.closePath(); context.fill(); context.stroke();
+      drawLayeredEllipse(0, -4, 32, 35, 0, flesh, "#301923", "#b65d60");
+      for (const side of [-1, 1]) {
+        context.fillStyle = "#7c4746"; context.beginPath(); context.moveTo(side * 17, -27); context.quadraticCurveTo(side * 48, -65, side * 55, -21); context.quadraticCurveTo(side * 33, -38, side * 22, -9); context.closePath(); context.fill(); context.stroke();
+      }
+      drawRimmedEye(-11, -9, 7, 5, 1, 1, "#dc8a37"); drawRimmedEye(11, -9, 7, 5, -1, 1, "#dc8a37");
+      drawMaw(0, 16, 16, 10, 7, 0, .9);
+      context.strokeStyle = "#d8a64a"; context.lineWidth = 3; context.beginPath(); context.moveTo(-18, 31); context.lineTo(0, 44); context.lineTo(18, 31); context.stroke();
+    } else if (stage === 2) {
+      context.save(); context.globalAlpha = .32; context.fillStyle = "#e4a43f"; context.shadowColor = "#f28f34"; context.shadowBlur = 18;
+      context.beginPath(); context.arc(0, 0, 52 + Math.sin(enemy.phase * 4) * 5, 0, TAU); context.fill(); context.restore();
+      for (const side of [-1, 1]) {
+        context.fillStyle = "#4a2736"; context.strokeStyle = "#21151b"; context.lineWidth = 5;
+        context.beginPath(); context.moveTo(side * 14, -8); context.quadraticCurveTo(side * 55, -63, side * 75, -15); context.lineTo(side * 47, -2); context.lineTo(side * 72, 25); context.quadraticCurveTo(side * 37, 28, side * 12, 9); context.closePath(); context.fill(); context.stroke();
+      }
+      drawLayeredEllipse(0, 0, 36, 43, 0, flesh, "#2d1721", "#b9515a");
+      drawBossSpines(7, 34, 19, "#b77c45", -Math.PI / 2);
+      drawRimmedEye(0, -13, 16, 10, 0, 1, "#eca53d", "#eee1c2");
+      drawMaw(0, 18, 18, 12, 8, 0, 1);
+      context.fillStyle = "#e8b64e"; context.beginPath(); context.arc(0, -47, 7, 0, TAU); context.fill();
+    } else {
+      for (const side of [-1, 1]) {
+        drawLimb(side * 18, 18, side * 34, 57, 20, "#55283a");
+        context.fillStyle = "#321b27"; context.strokeStyle = "#1d1319"; context.lineWidth = 5;
+        context.beginPath(); context.moveTo(side * 26, 53); context.lineTo(side * 66, 73); context.lineTo(side * 47, 45); context.closePath(); context.fill(); context.stroke();
+        context.beginPath(); context.moveTo(side * 16, -28); context.quadraticCurveTo(side * 60, -83, side * 83, -34); context.quadraticCurveTo(side * 49, -53, side * 29, -8); context.closePath(); context.fill(); context.stroke();
+        drawFang(side * 75, -43, 24, 9, side > 0 ? .8 : -.8, "#d8ad5a");
+      }
+      context.fillStyle = flesh; context.strokeStyle = "#2b1620"; context.lineWidth = 7;
+      context.beginPath(); context.moveTo(-38, -28); context.lineTo(-27, -50); context.lineTo(0, -38); context.lineTo(28, -51); context.lineTo(39, -27); context.lineTo(35, 33); context.lineTo(0, 49); context.lineTo(-36, 32); context.closePath(); context.fill(); context.stroke();
+      drawBonePlate(0, -26, 36, 25, 0, true, "#9c6f4a");
+      drawRimmedEye(-14, -10, 9, 6, 1, 1, "#f0a630"); drawRimmedEye(14, -10, 9, 6, -1, 1, "#f0a630");
+      drawMaw(0, 19, 22, 14, 10, 0, 1.1);
+      context.fillStyle = "#ffd35e"; context.shadowColor = "#ff8b35"; context.shadowBlur = 20;
+      context.beginPath(); context.moveTo(0, -63); context.quadraticCurveTo(-12, -48, 0, -33); context.quadraticCurveTo(14, -48, 0, -63); context.fill(); context.shadowBlur = 0;
+    }
+  }
+
+  function drawBossForm(enemy) {
+    const stage = clamp(enemy.bossStage || 1, 1, 3);
+    if (enemy.type === "bossCoil") drawCoilForm(enemy, stage);
+    else if (enemy.type === "bossHopper") drawHopperForm(enemy, stage);
+    else if (enemy.type === "bossDevourer") drawDevourerForm(enemy, stage);
+    else if (enemy.type === "bossIdol") drawIdolForm(enemy, stage);
+    else if (enemy.type === "bossPeep") drawPeepForm(enemy, stage);
+    else if (enemy.type === "bossMatron") drawMatronForm(enemy, stage);
+    else if (enemy.type === "bossHollow") drawHollowForm(enemy, stage);
+    else if (enemy.type === "bossHeart") drawHeartForm(enemy, stage);
+    else if (enemy.type === "bossBloat") drawBloatForm(enemy, stage);
+    else if (enemy.type === "bossBurrow") drawBurrowForm(enemy, stage);
+    else drawInfernalForm(enemy, stage);
+  }
+
+  function drawBossTransformation(enemy) {
+    if (enemy.stageTransition <= 0) return;
+    const duration = enemy.bossStage === 3 ? 1.9 : 1.55;
+    const progress = 1 - clamp(enemy.stageTransition / duration, 0, 1);
+    const theme = bossAttackThemes[enemy.type];
+    context.save();
+    context.rotate(-enemy.angle);
+    context.globalAlpha = Math.sin(progress * Math.PI) * .75;
+    context.strokeStyle = theme.core;
+    context.shadowColor = theme.color;
+    context.shadowBlur = 24;
+    context.lineWidth = 4;
+    context.beginPath(); context.arc(0, 0, 38 + progress * 46, 0, TAU); context.stroke();
+    context.lineWidth = 2;
+    context.beginPath(); context.arc(0, 0, 63 + progress * 74, -progress * TAU, TAU - progress * TAU); context.stroke();
+    context.fillStyle = theme.color;
+    const shardCount = enemy.bossStage === 3 ? 14 : 10;
+    for (let index = 0; index < shardCount; index += 1) {
+      const angle = index / shardCount * TAU + progress * .8;
+      const distanceValue = 35 + progress * (enemy.bossStage === 3 ? 82 : 58);
+      const size = 7 + index % 3 * 2;
+      context.save();
+      context.translate(Math.cos(angle) * distanceValue, Math.sin(angle) * distanceValue);
+      context.rotate(angle + progress * 2.4);
+      context.beginPath(); context.moveTo(size, 0); context.lineTo(-size * .65, -size * .45); context.lineTo(-size * .25, size * .72); context.closePath(); context.fill();
+      context.restore();
+    }
+    context.restore();
   }
 
   function drawBoss(enemy) {
@@ -3613,17 +4248,11 @@
     context.restore();
     context.save();
     const transitionPulse = enemy.stageTransition > 0 ? Math.sin(enemy.stageTransition * 18) * .07 : 0;
-    const stageScale = [1.38, 1.62, 1.88][enemy.bossStage - 1] + transitionPulse;
-    context.scale(stageScale, stageScale);
-    if (enemy.type === "bossHeart") drawHeartBoss(enemy);
-    else if (enemy.type === "bossDevourer") drawBroodBoss(enemy);
-    else if (enemy.type === "bossInfernal") drawInfernalBoss(enemy);
-    else drawCodexBoss(enemy);
-    context.restore();
-    context.save();
-    context.rotate(-enemy.angle);
-    drawBossPhaseIdentity(enemy);
-    drawBossMutation(enemy);
+    const attackPulse = enemy.telegraph > 0 ? Math.sin(game.elapsed * 18) * .025 : 0;
+    const stageScale = [1.34, 1.48, 1.62][enemy.bossStage - 1] + transitionPulse;
+    context.scale(stageScale * (1 + attackPulse), stageScale * (1 - attackPulse));
+    drawBossForm(enemy);
+    drawBossTransformation(enemy);
     context.restore();
   }
 
@@ -4918,8 +5547,9 @@
         bossMechanics: { ...game.bossMechanics },
         bossSignatures: { ...game.bossSignatures },
         bossSignatureResolutions: { ...game.bossSignatureResolutions },
-        visualVersion: 2,
-        bossCatalog: Object.fromEntries(Object.entries(bossProfiles).map(([id, profile]) => [id, { hp: profile.hp, stages: [...profile.stages], projectile: bossAttackThemes[id].shape, attackTheme: bossAttackThemes[id].name }])),
+        visualVersion: 3,
+        bossFormCatalog: Object.fromEntries(Object.entries(bossFormCatalog).map(([id, forms]) => [id, [...forms]])),
+        bossCatalog: Object.fromEntries(Object.entries(bossProfiles).map(([id, profile]) => [id, { hp: profile.hp, stages: [...profile.stages], forms: [...bossFormCatalog[id]], projectile: bossAttackThemes[id].shape, attackTheme: bossAttackThemes[id].name }])),
         floorRoom: game.rooms[game.room].floorRoom,
         roomKinds: game.rooms.map(room => room.kind),
         routeChoice: game.routeChoice ? game.routeChoice.options.map(option => option.id) : null,
@@ -4928,7 +5558,7 @@
         plannedEnemyTypes: game.rooms.flatMap(room => room.enemies),
         enemyTypes: game.enemies.map(enemy => enemy.type),
         enemyHealth: game.enemies.map(enemy => enemy.hp),
-        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, maxHp: enemy.maxHp, radius: enemy.radius, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, bossStage: enemy.bossStage, stageTransition: enemy.stageTransition, bossStats: isBoss(enemy) ? { ...bossStats(enemy) } : null, attackMode: enemy.attackMode, signatureName: enemy.signatureName, telegraph: enemy.telegraph, telegraphTargets: enemy.telegraphTargets?.length || 0, invulnerable: enemy.invulnerable, statuses: { ...enemy.statuses } })),
+        enemies: game.enemies.map(enemy => ({ x: enemy.x, y: enemy.y, hp: enemy.hp, maxHp: enemy.maxHp, radius: enemy.radius, type: enemy.type, elite: enemy.elite, affix: enemy.affix, shield: enemy.shield, summonedBy: enemy.summonedBy || null, bossStage: enemy.bossStage, bossForm: isBoss(enemy) ? bossFormCatalog[enemy.type][clamp(enemy.bossStage - 1, 0, 2)] : null, stageTransition: enemy.stageTransition, bossStats: isBoss(enemy) ? { ...bossStats(enemy) } : null, attackMode: enemy.attackMode, signatureName: enemy.signatureName, telegraph: enemy.telegraph, telegraphTargets: enemy.telegraphTargets?.length || 0, invulnerable: enemy.invulnerable, statuses: { ...enemy.statuses } })),
         doorOpen: game.doorOpen,
         pickupTypes: game.pickups.map(pickup => pickup.type),
         shopOffers: game.pickups.filter(pickup => pickup.shopItem && !pickup.dead).map(pickup => ({
@@ -5085,6 +5715,62 @@
     },
     selectWeapon(id) {
       if (weaponNames[id]) selectedWeapon = id;
+    },
+    showcaseHero(id) {
+      if (!heroes[id]) return false;
+      selectedHero = id;
+      newGame();
+      game.enemies.length = 0;
+      game.enemyBullets.length = 0;
+      game.bullets.length = 0;
+      game.pickups.length = 0;
+      game.obstacles.length = 0;
+      game.particles.length = 0;
+      game.texts.length = 0;
+      game.player.x = ROOM_WIDTH * .5;
+      game.player.y = ROOM_HEIGHT * .52;
+      game.player.angle = 0;
+      game.player.aimAngle = 0;
+      game.player.moveAngle = 0;
+      game.transition = 0;
+      game.doorOpen = false;
+      return true;
+    },
+    showcaseEnemy(type, stage = 1) {
+      const regularTypes = ["grunt", "turret", "charger", "bat", "splitter", "leech", "cultist", "bomber"];
+      if (!game || (!regularTypes.includes(type) && !bossProfiles[type])) return false;
+      game.enemies.length = 0;
+      game.enemyBullets.length = 0;
+      game.bullets.length = 0;
+      game.bombs.length = 0;
+      game.hazards.length = 0;
+      game.bossWaves.length = 0;
+      game.bossLasers.length = 0;
+      game.obstacles.length = 0;
+      game.particles.length = 0;
+      game.texts.length = 0;
+      spawnEnemy(type);
+      const enemy = game.enemies[0];
+      enemy.x = ROOM_WIDTH * .64;
+      enemy.y = ROOM_HEIGHT * .52;
+      enemy.angle = Math.PI;
+      enemy.speed = 0;
+      enemy.cooldown = 999;
+      enemy.signatureCooldown = 999;
+      if (bossProfiles[type]) {
+        enemy.bossStage = clamp(Math.round(stage), 1, 3);
+        enemy.hp = enemy.maxHp * ([1, .6, .3][enemy.bossStage - 1]);
+        enemy.stageTransition = 0;
+        enemy.submerged = false;
+        enemy.invulnerable = false;
+      }
+      game.player.x = ROOM_WIDTH * .24;
+      game.player.y = ROOM_HEIGHT * .52;
+      game.player.vx = 0;
+      game.player.vy = 0;
+      game.transition = 0;
+      game.doorOpen = false;
+      return true;
     },
     equipWeapon(id) {
       if (!game || !weaponNames[id]) return false;
