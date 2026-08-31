@@ -64,7 +64,7 @@
     seeker: "追魂蜂巢", prism: "星陨棱镜", orbit: "血月环刃"
   };
   const weaponDescriptions = {
-    repeater: "稳定连射 · 连击分裂", scatter: "近距扇形爆发", wisp: "双灵体齐射", cleaver: "近战格挡弹幕",
+    repeater: "稳定连射 · 连击分裂", scatter: "近距扇形爆发", wisp: "双灵体齐射", cleaver: "宽幅斩击 · 护刃弹反",
     seeker: "自动锁敌追踪", prism: "折射弹跳光束", orbit: "往返回旋双刃"
   };
   const materialNames = { bone: "骨粉", crystal: "幽晶", sap: "血藤汁" };
@@ -1029,18 +1029,25 @@
 
   function swingCleaver(angle) {
     const player = game.player;
+    const level = player.weaponLevel;
     const critical = Math.random() < player.critChance;
     const coinMultiplier = 1 + Math.min(1.5, player.coins * player.coinPower);
-    player.cooldown = Math.max(.3, player.fireRate * 1.6);
+    const radius = 126 + player.bulletSize * 2.5 + (level - 1) * 16;
+    const maxLife = .28 + (level - 1) * .015;
+    player.cooldown = Math.max(.28, player.fireRate * 1.42);
     player.recoil = -4;
     player.squash = .62;
     game.slashes.push({
-      x: player.x, y: player.y, angle, radius: 82 + player.bulletSize * 2 + (player.weaponLevel - 1) * 12,
-      arc: 1.55 + (player.weaponLevel - 1) * .18, life: .18, maxLife: .18,
-      damage: player.damage * coinMultiplier * (player.rage > 0 ? 1.65 : 1) * (2.15 + (player.weaponLevel - 1) * .28) * (critical ? 2 : 1),
-      critical, playerAttack: true, melee: true, hitIds: new Set()
+      x: player.x, y: player.y, angle, radius, waveRadius: radius + 38 + (level - 1) * 5,
+      guardRadius: 64 + (level - 1) * 8,
+      arc: 2.25 + (level - 1) * .18, waveArc: 1.62 + (level - 1) * .15,
+      life: maxLife, maxLife,
+      damage: player.damage * coinMultiplier * (player.rage > 0 ? 1.65 : 1) * (2.15 + (level - 1) * .28) * (critical ? 2 : 1),
+      waveDamage: .62 + (level - 1) * .04,
+      critical, playerAttack: true, melee: true, hitIds: new Set(), blocked: 0
     });
-    directionalBurst(player.x + Math.cos(angle) * 54, player.y + Math.sin(angle) * 54, angle, critical ? "#fff2a1" : "#d8c7a4", 12, 190);
+    directionalBurst(player.x + Math.cos(angle) * 76, player.y + Math.sin(angle) * 76, angle, critical ? "#fff2a1" : "#d8c7a4", 16, 215);
+    shockwave(player.x + Math.cos(angle) * 42, player.y + Math.sin(angle) * 42, critical ? "#fff0a3" : "#b9e8ef", 7);
     sound(125, .11, "sawtooth", .018);
   }
 
@@ -1587,19 +1594,37 @@
     for (const slash of game.slashes) {
       slash.life -= dt;
       for (const enemy of game.enemies) {
-        if (enemy.dead || slash.hitIds.has(enemy.id) || distance(slash, enemy) > slash.radius + enemy.radius) continue;
+        if (enemy.dead || slash.hitIds.has(enemy.id)) continue;
+        const enemyDistance = distance(slash, enemy);
         const targetAngle = Math.atan2(enemy.y - slash.y, enemy.x - slash.x);
-        if (Math.abs(angleDelta(targetAngle, slash.angle)) > slash.arc / 2) continue;
+        const angleOffset = Math.abs(angleDelta(targetAngle, slash.angle));
+        const guarded = enemyDistance <= slash.guardRadius + enemy.radius;
+        const mainHit = enemyDistance <= slash.radius + enemy.radius && angleOffset <= slash.arc / 2;
+        const waveHit = enemyDistance <= slash.waveRadius + enemy.radius && angleOffset <= slash.waveArc / 2;
+        if (!guarded && !mainHit && !waveHit) continue;
         slash.hitIds.add(enemy.id);
-        damageEnemy(enemy, slash.damage, slash);
-        impactBurst(enemy.x, enemy.y, slash.angle, slash.critical, "cleaver");
+        const outerWave = !guarded && !mainHit;
+        const source = outerWave ? { ...slash, knockback: 6, wave: true } : { ...slash, knockback: 11 };
+        damageEnemy(enemy, slash.damage * (outerWave ? slash.waveDamage : 1), source);
+        impactBurst(enemy.x, enemy.y, slash.angle, slash.critical, outerWave ? "prism" : "cleaver");
+        if (!outerWave) directionalBurst(enemy.x, enemy.y, slash.angle, "#ead7ac", 7, 145);
       }
       for (const bullet of game.enemyBullets) {
-        if (bullet.life <= 0 || distance(slash, bullet) > slash.radius) continue;
+        if (bullet.life <= 0) continue;
+        const bulletDistance = distance(slash, bullet);
         const bulletAngle = Math.atan2(bullet.y - slash.y, bullet.x - slash.x);
-        if (Math.abs(angleDelta(bulletAngle, slash.angle)) > slash.arc / 2) continue;
+        const guarded = bulletDistance <= slash.guardRadius + bullet.radius;
+        const parried = bulletDistance <= slash.radius + bullet.radius && Math.abs(angleDelta(bulletAngle, slash.angle)) <= slash.arc / 2;
+        if (!guarded && !parried) continue;
         bullet.life = 0;
-        directionalBurst(bullet.x, bullet.y, slash.angle, "#b9e8ef", 5, 120);
+        slash.blocked += 1;
+        directionalBurst(bullet.x, bullet.y, Math.atan2(bullet.vy, bullet.vx) + Math.PI, "#c9f7ff", 10, 185);
+        shockwave(bullet.x, bullet.y, "#9de8f4", 5);
+        screenShake = Math.max(screenShake, 3.5);
+        if (slash.blocked === 1) {
+          game.texts.push({ text: guarded ? "护刃弹反" : "斩落弹幕", x: bullet.x, y: bullet.y - 15, life: .48, color: "#c9f7ff", size: 12, velocityY: -24 });
+          sound(540, .055, "square", .012);
+        }
       }
     }
     game.slashes = game.slashes.filter(slash => slash.life > 0);
@@ -1730,8 +1755,9 @@
       velocityY: critical ? -34 : -24
     });
     if (source && !statusTick) {
-      enemy.x += Math.cos(impactAngle) * (source.skill ? 18 : critical ? 8 : 4);
-      enemy.y += Math.sin(impactAngle) * (source.skill ? 18 : critical ? 8 : 4);
+      const knockback = Number.isFinite(source.knockback) ? source.knockback : source.skill ? 18 : critical ? 8 : 4;
+      enemy.x += Math.cos(impactAngle) * knockback;
+      enemy.y += Math.sin(impactAngle) * knockback;
     }
     if (critical) sound(410, .07, "square", .012);
     applyAttackStatuses(enemy, source);
@@ -4637,17 +4663,46 @@
       const progress = 1 - slash.life / slash.maxLife;
       const startAngle = slash.angle - slash.arc / 2 + progress * .22;
       const endAngle = slash.angle + slash.arc / 2 + progress * .22;
+      const waveStart = slash.angle - slash.waveArc / 2 + progress * .16;
+      const waveEnd = slash.angle + slash.waveArc / 2 + progress * .16;
       context.save();
+      context.globalAlpha = clamp(slash.life / slash.maxLife, 0, 1);
+      context.strokeStyle = slash.critical ? "#ffd86e" : "#79c9d5";
+      context.shadowColor = slash.critical ? "#f1a647" : "#5eb5ca";
+      context.shadowBlur = slash.critical ? 22 : 14;
+      context.lineWidth = 5 * (1 - progress * .5);
+      context.beginPath(); context.arc(slash.x, slash.y, slash.waveRadius * (.76 + progress * .23), waveStart, waveEnd); context.stroke();
+      context.globalAlpha *= .38;
+      context.lineWidth = 13 * (1 - progress * .7);
+      context.beginPath(); context.arc(slash.x, slash.y, slash.waveRadius * (.68 + progress * .26), waveStart, waveEnd); context.stroke();
       context.globalAlpha = clamp(slash.life / slash.maxLife, 0, 1);
       context.strokeStyle = slash.critical ? "#fff2a1" : "#d8d1bd";
       context.shadowColor = slash.critical ? "#f1a647" : "#9a806d";
       context.shadowBlur = slash.critical ? 18 : 9;
-      context.lineWidth = 12 * (1 - progress * .45);
+      context.lineWidth = 15 * (1 - progress * .45);
       context.lineCap = "round";
-      context.beginPath(); context.arc(slash.x, slash.y, slash.radius * (.62 + progress * .28), startAngle, endAngle); context.stroke();
+      const bladeRadius = slash.radius * (.58 + progress * .38);
+      context.beginPath(); context.arc(slash.x, slash.y, bladeRadius, startAngle, endAngle); context.stroke();
       context.strokeStyle = "#fff7dc";
+      context.lineWidth = 3;
+      context.beginPath(); context.arc(slash.x, slash.y, bladeRadius + 7, startAngle, endAngle); context.stroke();
+      context.fillStyle = slash.critical ? "#ffe985" : "#d9c7a1";
+      context.shadowBlur = 5;
+      for (let tooth = 0; tooth < 7; tooth += 1) {
+        const toothAngle = startAngle + (endAngle - startAngle) * (tooth + .5) / 7;
+        const inner = bladeRadius - 7;
+        const outer = bladeRadius + 12;
+        context.beginPath();
+        context.moveTo(slash.x + Math.cos(toothAngle - .035) * inner, slash.y + Math.sin(toothAngle - .035) * inner);
+        context.lineTo(slash.x + Math.cos(toothAngle) * outer, slash.y + Math.sin(toothAngle) * outer);
+        context.lineTo(slash.x + Math.cos(toothAngle + .035) * inner, slash.y + Math.sin(toothAngle + .035) * inner);
+        context.closePath();
+        context.fill();
+      }
+      context.globalAlpha *= .45;
+      context.strokeStyle = "#b9f4ff";
       context.lineWidth = 2;
-      context.beginPath(); context.arc(slash.x, slash.y, slash.radius * (.68 + progress * .28), startAngle, endAngle); context.stroke();
+      context.beginPath(); context.arc(slash.x, slash.y, slash.guardRadius * (1 + progress * .12), 0, TAU); context.stroke();
       context.restore();
     }
   }
@@ -5591,6 +5646,11 @@
         bombs: game.bombs.length,
         hazards: game.hazards.length,
         slashes: game.slashes.length,
+        cleaverSlashes: game.slashes.map(slash => ({
+          radius: slash.radius, waveRadius: slash.waveRadius, guardRadius: slash.guardRadius,
+          arc: slash.arc, waveArc: slash.waveArc, life: slash.life, maxLife: slash.maxLife,
+          damage: slash.damage, waveDamage: slash.waveDamage, blocked: slash.blocked
+        })),
         bossWaves: game.bossWaves.length,
         bossLasers: game.bossLasers.length,
         arenaInset: game.arenaInset,
@@ -5782,6 +5842,14 @@
       if (!game || game.state !== "playing") return false;
       game.player.cooldown = 0;
       firePlayer(angle);
+      return true;
+    },
+    spawnEnemyBullet(x, y, vx = 0, vy = 0) {
+      if (!game || game.state !== "playing") return false;
+      game.enemyBullets.push({
+        x, y, previousX: x, previousY: y, vx, vy,
+        radius: 5, life: 4, damage: 1, stage: 0, ownerId: 0, kind: "测试弹幕"
+      });
       return true;
     },
     toggleWorkshop(open) {

@@ -200,6 +200,61 @@ assert(game.getState().stats.weapon === "cleaver" && game.getState().stats.weapo
 
 game.start();
 step();
+game.showcaseEnemy("grunt");
+game.equipWeapon("cleaver");
+state = game.getState();
+let cleaverEnemy = state.enemies[0];
+game.setPlayerPosition(cleaverEnemy.x - 135, cleaverEnemy.y);
+const cleaverDirectHp = cleaverEnemy.hp;
+game.fire(0);
+state = game.getState();
+const levelOneSlash = state.cleaverSlashes[0];
+assert(levelOneSlash.radius >= 136 && levelOneSlash.waveRadius >= 174, "Cleaver reach was not expanded");
+assert(levelOneSlash.arc >= 2.2 && levelOneSlash.maxLife >= .28, "Cleaver sweep or guard window is too narrow");
+assert(levelOneSlash.guardRadius >= 64 && levelOneSlash.waveDamage < 1, "Cleaver guard ring or wave falloff is invalid");
+step(1);
+assert(game.getState().enemies[0].hp < cleaverDirectHp, "Cleaver main sweep missed a mid-range enemy");
+
+step(20);
+game.showcaseEnemy("grunt");
+state = game.getState();
+cleaverEnemy = state.enemies[0];
+game.setPlayerPosition(cleaverEnemy.x - 168, cleaverEnemy.y);
+const cleaverWaveHp = cleaverEnemy.hp;
+game.fire(0);
+step(1);
+assert(game.getState().enemies[0].hp < cleaverWaveHp, "Cleaver outer blade wave failed");
+
+step(20);
+game.showcaseEnemy("grunt");
+state = game.getState();
+cleaverEnemy = state.enemies[0];
+game.setPlayerPosition(cleaverEnemy.x - 235, cleaverEnemy.y);
+const cleaverFarHp = cleaverEnemy.hp;
+game.fire(0);
+step(1);
+assert(game.getState().enemies[0].hp === cleaverFarHp, "Cleaver gained unintended unlimited range");
+
+step(20);
+state = game.getState();
+game.spawnEnemyBullet(state.player.x - 52, state.player.y, 0, 0);
+game.fire(0);
+step(1);
+state = game.getState();
+assert(state.enemyBullets === 0 && state.cleaverSlashes[0].blocked === 1, "Cleaver close guard did not parry a rear projectile");
+
+step(20);
+game.giveItem("serratedCrown");
+game.fire(0);
+const levelTwoSlash = game.getState().cleaverSlashes[0];
+step(20);
+game.giveItem("serratedCrown");
+game.fire(0);
+const levelThreeSlash = game.getState().cleaverSlashes[0];
+assert(levelThreeSlash.radius > levelTwoSlash.radius && levelThreeSlash.guardRadius > levelTwoSlash.guardRadius, "Cleaver evolution did not improve reach and safety");
+
+game.start();
+step();
 game.giveItem("witchLantern");
 documentEvents.keydown[0]({ code: "ArrowRight", key: "ArrowRight", repeat: false, preventDefault() {} });
 step(1);

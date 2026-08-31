@@ -120,6 +120,38 @@ state = await evaluate("window.__game.getState()");
 assert(state.playerProjectiles.some(projectile => projectile.weapon === "orbit" && projectile.boomerang), "Orbit boomerang failed");
 await screenshot("v5-crafted-weapons");
 
+await evaluate(`(() => {
+  window.__game.start();
+  window.__game.showcaseEnemy('grunt');
+  window.__game.equipWeapon('cleaver');
+  const enemy = window.__game.getState().enemies[0];
+  window.__game.setPlayerPosition(enemy.x - 135, enemy.y);
+})()`);
+const cleaverEnemyHp = await evaluate("window.__game.getState().enemies[0].hp");
+await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "ArrowRight", key: "ArrowRight", windowsVirtualKeyCode: 39 });
+await wait(65);
+state = await evaluate("window.__game.getState()");
+assert(state.cleaverSlashes[0]?.radius >= 136 && state.cleaverSlashes[0]?.waveRadius >= 174, "Real cleaver sweep did not gain range");
+assert(!state.enemies.length || state.enemies[0].hp < cleaverEnemyHp, "Real cleaver input did not hit a mid-range enemy");
+await screenshot("v10-cleaver-expanded-sweep");
+await wait(800);
+await call("Input.dispatchKeyEvent", { type: "keyUp", code: "ArrowRight", key: "ArrowRight" });
+state = await evaluate("window.__game.getState()");
+assert(state.enemyCount === 0, "Sustained cleaver attacks could not defeat a basic enemy");
+
+await evaluate(`(() => {
+  window.__game.start();
+  window.__game.showcaseEnemy('grunt');
+  window.__game.equipWeapon('cleaver');
+  const player = window.__game.getState().player;
+  window.__game.spawnEnemyBullet(player.x - 52, player.y, 0, 0);
+  window.__game.fire(0);
+})()`);
+await wait(40);
+state = await evaluate("window.__game.getState()");
+assert(state.enemyBullets === 0 && state.cleaverSlashes[0]?.blocked === 1, "Real cleaver guard did not parry a rear projectile");
+await screenshot("v10-cleaver-guard-parry");
+
 await evaluate("window.__game.start(); for (let i = 0; i < 8; i += 1) window.__game.giveItem('shield'); window.__game.goToRoom(4); window.__game.equipWeapon('seeker')");
 await wait(450);
 await call("Page.bringToFront");
@@ -269,5 +301,5 @@ assert(landscapeState.viewport.roomDisplayHeight >= 389, "Mobile landscape arena
 await screenshot("v7-mobile-landscape-arena");
 
 assert(browserErrors.length === 0, `Browser errors: ${browserErrors.join(" | ")}`);
-console.log(JSON.stringify({ authorCredit: "passed", portraitRoomHeight: mobileBefore.viewport.roomDisplayHeight, landscapeArena: `${landscapeState.viewport.roomWidth}x${landscapeState.viewport.roomHeight}`, itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", realBossBalance: { damage: balanceBossBefore.hp - balanceBossAfter.hp, movement: balanceAfter.player.x - balanceBefore.player.x }, shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", mobileCrossRoomFire: "passed", browserErrors: browserErrors.length }, null, 2));
+console.log(JSON.stringify({ authorCredit: "passed", portraitRoomHeight: mobileBefore.viewport.roomDisplayHeight, landscapeArena: `${landscapeState.viewport.roomWidth}x${landscapeState.viewport.roomHeight}`, itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", cleaverCombat: "passed", realBossBalance: { damage: balanceBossBefore.hp - balanceBossAfter.hp, movement: balanceAfter.player.x - balanceBefore.player.x }, shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", mobileCrossRoomFire: "passed", browserErrors: browserErrors.length }, null, 2));
 socket.close();
