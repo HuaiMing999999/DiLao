@@ -15,6 +15,12 @@
   const workshopInventory = document.querySelector("#workshop-inventory");
   const farmPlots = document.querySelector("#farm-plots");
   const forgeRecipes = document.querySelector("#forge-recipes");
+  const benefitsPanel = document.querySelector("#benefits-panel");
+  const benefitsBalance = document.querySelector("#benefits-balance");
+  const benefitsContent = document.querySelector("#benefits-content");
+  const benefitsNotice = document.querySelector("#benefits-notice");
+  const supplyBalanceBadge = document.querySelector("#supply-balance-badge");
+  const rerollButton = document.querySelector("#reroll-button");
   const ROOM_WIDTH = 1280;
   const ROOM_HEIGHT = 720;
   const WALL = 48;
@@ -72,6 +78,25 @@
     seeker: { name: "追魂蜂巢", icon: "⌁", blueprintAt: 1, cost: { bone: 2, crystal: 2, sap: 1 }, detail: "自动锁定最近敌人，发射会转向的双重魂弹。" },
     prism: { name: "星陨棱镜", icon: "◇", blueprintAt: 3, cost: { bone: 2, crystal: 4, sap: 2 }, detail: "高能棱镜弹命中后折射到新的目标。" },
     orbit: { name: "血月环刃", icon: "☾", blueprintAt: 5, cost: { bone: 5, crystal: 2, sap: 4 }, detail: "投出弧线双刃，飞出后自动回到持有者身边。" }
+  };
+  const benefitProducts = {
+    voucherBasic: { category: "voucher", name: "基础权益兑换凭证", icon: "券", price: 100, detail: "未来可按正式活动规则兑换基础京东权益。", note: "活动测试 · 暂不可用于真实消费", limit: 1 },
+    voucherPreferred: { category: "voucher", name: "优选权益兑换凭证", icon: "惠", price: 250, detail: "未来可按正式活动规则兑换指定品类权益。", note: "活动测试 · 暂不可用于真实消费", limit: 1 },
+    voucherLimited: { category: "voucher", name: "限定权益兑换凭证", icon: "礼", price: 500, detail: "为后续节日或品牌活动保留的高级兑换凭证。", note: "活动测试 · 暂不可用于真实消费", limit: 1 },
+    ration: { category: "booster", name: "旅行口粮", icon: "♥", price: 20, detail: "下一局首次进入 Boss 房时恢复半颗心。", note: "一次性 · 每局最多携带一个", maxOwned: 3 },
+    luckyBadge: { category: "booster", name: "幸运徽章", icon: "✦", price: 25, detail: "下一局首次宝藏三选一可免费刷新一次。", note: "一次性 · 强度低于普通遗物", maxOwned: 3 },
+    sparePlate: { category: "booster", name: "备用护片", icon: "◆", price: 30, detail: "下一局开始时获得一层一次性护盾。", note: "一次性 · 不提升永久属性", maxOwned: 3 },
+    redTrail: { category: "cosmetic", slot: "projectile", name: "赤金弹道", icon: "➶", price: 180, detail: "将玩家弹体轨迹替换为赤金色余辉。", note: "永久外观 · 不改变伤害" },
+    redSlash: { category: "cosmetic", slot: "cleaver", name: "京红刀光", icon: "⌁", price: 250, detail: "将锯齿祭刃的外圈刀波替换为京红特效。", note: "永久外观 · 不改变范围" },
+    supplyTitle: { category: "cosmetic", slot: "title", name: "补给先锋", icon: "♜", price: 120, detail: "在战斗构筑栏展示限定称号“补给先锋”。", note: "永久称号 · 无属性加成" }
+  };
+  const dailyMissionCatalog = {
+    rooms: { name: "地牢巡查", detail: "完成 3 个战斗房", target: 3, reward: 5 },
+    kills: { name: "清剿委托", detail: "击败 20 个敌人", target: 20, reward: 5 },
+    evades: { name: "无伤演练", detail: "成功翻滚躲避 5 次", target: 5, reward: 5 },
+    shop: { name: "商旅往来", detail: "在局内商店购买 1 件遗物", target: 1, reward: 5 },
+    risk: { name: "险路勘探", detail: "选择 1 次高风险路线", target: 1, reward: 8 },
+    boss: { name: "领主悬赏", detail: "击败 1 位 Boss", target: 1, reward: 12 }
   };
   const bossProfiles = {
     bossCoil: { hp: 124, radius: 42, speed: 98, stages: ["蛇行", "遗蜕", "断节"] },
@@ -178,12 +203,15 @@
   let selectedWeapon = "repeater";
   let guideOpen = false;
   let workshopOpen = false;
+  let benefitsOpen = false;
+  let benefitsTab = "store";
+  let benefitsMessage = "";
   let workshopRefreshTimer = 0;
   let audioContext;
   const keys = new Set();
   const pointer = { x: ROOM_WIDTH / 2, y: ROOM_HEIGHT / 2, down: false, moveDown: false, active: false, firePointerId: null };
   const touchMove = { x: 0, y: 0, pointerId: null };
-  const META_KEY = "shell-dungeon-meta-v2";
+  const META_KEY = window.location?.search.includes("__audit=1") ? "shell-dungeon-meta-audit-v2" : "shell-dungeon-meta-v2";
   const weaponUnlocks = { repeater: 0, scatter: 0, wisp: 1, cleaver: 3 };
   let metaProgress = loadMetaProgress();
 
@@ -199,7 +227,9 @@
   function loadMetaProgress() {
     const fallback = {
       runs: 0, wins: 0, bossDefeats: 0, bestKills: 0, seeds: 2, harvests: 0,
-      materials: { bone: 0, crystal: 0, sap: 0 }, plots: [null, null, null], blueprints: [], craftedWeapons: []
+      materials: { bone: 0, crystal: 0, sap: 0 }, plots: [null, null, null], blueprints: [], craftedWeapons: [],
+      supplyCoins: 0, defeatedBossTypes: [], vouchers: [], boosterInventory: {}, selectedBooster: null,
+      ownedCosmetics: [], equippedCosmetics: { projectile: null, cleaver: null, title: null }, storePurchases: {}, daily: null
     };
     try {
       const stored = window.localStorage && window.localStorage.getItem(META_KEY);
@@ -210,7 +240,14 @@
         materials: { ...fallback.materials, ...(parsed.materials || {}) },
         plots: Array.from({ length: 3 }, (_, index) => parsed.plots?.[index] || null),
         blueprints: Array.isArray(parsed.blueprints) ? parsed.blueprints : [],
-        craftedWeapons: Array.isArray(parsed.craftedWeapons) ? parsed.craftedWeapons : []
+        craftedWeapons: Array.isArray(parsed.craftedWeapons) ? parsed.craftedWeapons : [],
+        defeatedBossTypes: Array.isArray(parsed.defeatedBossTypes) ? parsed.defeatedBossTypes : [],
+        vouchers: Array.isArray(parsed.vouchers) ? parsed.vouchers : [],
+        boosterInventory: { ...fallback.boosterInventory, ...(parsed.boosterInventory || {}) },
+        ownedCosmetics: Array.isArray(parsed.ownedCosmetics) ? parsed.ownedCosmetics : [],
+        equippedCosmetics: { ...fallback.equippedCosmetics, ...(parsed.equippedCosmetics || {}) },
+        storePurchases: { ...fallback.storePurchases, ...(parsed.storePurchases || {}) },
+        daily: parsed.daily && typeof parsed.daily === "object" ? parsed.daily : null
       };
     } catch {
       return fallback;
@@ -222,6 +259,220 @@
       if (window.localStorage) window.localStorage.setItem(META_KEY, JSON.stringify(metaProgress));
     } catch {}
     updateMetaUi();
+    if (benefitsOpen) renderBenefits();
+  }
+
+  function localDateKey(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function dailyMissionIds(dateKey) {
+    const ids = Object.keys(dailyMissionCatalog);
+    const seed = [...dateKey].reduce((total, character) => total + character.charCodeAt(0), 0) % ids.length;
+    return Array.from({ length: 3 }, (_, index) => ids[(seed + index * 2) % ids.length]);
+  }
+
+  function ensureDailyMissions() {
+    const date = localDateKey();
+    if (metaProgress.daily?.date === date) return false;
+    const taskIds = dailyMissionIds(date);
+    metaProgress.daily = {
+      date,
+      taskIds,
+      progress: Object.fromEntries(taskIds.map(id => [id, 0])),
+      claimed: [],
+      loginReward: 5
+    };
+    metaProgress.supplyCoins += 5;
+    return true;
+  }
+
+  function recordDailyProgress(id, amount = 1) {
+    if (!game || game.debugAssisted || amount <= 0) return false;
+    ensureDailyMissions();
+    if (!metaProgress.daily.taskIds.includes(id)) return false;
+    const mission = dailyMissionCatalog[id];
+    const previous = metaProgress.daily.progress[id] || 0;
+    const next = Math.min(mission.target, previous + amount);
+    if (next === previous) return false;
+    metaProgress.daily.progress[id] = next;
+    saveMetaProgress();
+    return true;
+  }
+
+  function claimDailyMission(id) {
+    ensureDailyMissions();
+    const daily = metaProgress.daily;
+    const mission = dailyMissionCatalog[id];
+    if (!mission || !daily.taskIds.includes(id) || daily.claimed.includes(id) || (daily.progress[id] || 0) < mission.target) return false;
+    daily.claimed.push(id);
+    metaProgress.supplyCoins += mission.reward;
+    benefitsMessage = `${mission.name}已领取 · 补给币 +${mission.reward}`;
+    saveMetaProgress();
+    return true;
+  }
+
+  function benefitOwned(productId) {
+    const product = benefitProducts[productId];
+    if (!product) return false;
+    if (product.category === "voucher") return metaProgress.vouchers.some(voucher => voucher.productId === productId);
+    if (product.category === "cosmetic") return metaProgress.ownedCosmetics.includes(productId);
+    return (metaProgress.boosterInventory[productId] || 0) >= (product.maxOwned || Infinity);
+  }
+
+  function purchaseBenefit(productId) {
+    const product = benefitProducts[productId];
+    if (!product || benefitOwned(productId) || metaProgress.supplyCoins < product.price) return false;
+    metaProgress.supplyCoins -= product.price;
+    metaProgress.storePurchases[productId] = (metaProgress.storePurchases[productId] || 0) + 1;
+    if (product.category === "voucher") {
+      metaProgress.vouchers.push({ productId, acquiredAt: Date.now(), status: "pending" });
+      benefitsMessage = `${product.name}已放入权益背包 · 当前仅为测试凭证`;
+    } else if (product.category === "booster") {
+      metaProgress.boosterInventory[productId] = (metaProgress.boosterInventory[productId] || 0) + 1;
+      if (!metaProgress.selectedBooster) metaProgress.selectedBooster = productId;
+      benefitsMessage = `${product.name}已兑换${metaProgress.selectedBooster === productId ? "并自动携带" : ""}`;
+    } else {
+      metaProgress.ownedCosmetics.push(productId);
+      metaProgress.equippedCosmetics[product.slot] = productId;
+      benefitsMessage = `${product.name}已解锁并装备 · 仅改变外观`;
+    }
+    saveMetaProgress();
+    return true;
+  }
+
+  function equipBenefit(productId) {
+    const product = benefitProducts[productId];
+    if (!product) return false;
+    if (product.category === "booster") {
+      if ((metaProgress.boosterInventory[productId] || 0) <= 0) return false;
+      metaProgress.selectedBooster = metaProgress.selectedBooster === productId ? null : productId;
+      benefitsMessage = metaProgress.selectedBooster ? `下一局将携带 ${product.name}` : `已卸下 ${product.name}`;
+    } else if (product.category === "cosmetic") {
+      if (!metaProgress.ownedCosmetics.includes(productId)) return false;
+      metaProgress.equippedCosmetics[product.slot] = metaProgress.equippedCosmetics[product.slot] === productId ? null : productId;
+      benefitsMessage = metaProgress.equippedCosmetics[product.slot] ? `已装备 ${product.name}` : `已卸下 ${product.name}`;
+    } else return false;
+    saveMetaProgress();
+    return true;
+  }
+
+  function benefitCard(productId) {
+    const product = benefitProducts[productId];
+    const count = metaProgress.boosterInventory[productId] || 0;
+    const owned = benefitOwned(productId);
+    const affordable = metaProgress.supplyCoins >= product.price;
+    const labels = { voucher: "权益兑换 · 测试凭证", booster: "轻量补给 · 单局消耗", cosmetic: "永久外观 · 零属性" };
+    const buttonText = product.category === "booster" ? count >= product.maxOwned ? `库存已满 ${count}/${product.maxOwned}` : `兑换 · ◈ ${product.price}` : owned ? "已拥有" : `兑换 · ◈ ${product.price}`;
+    return `<article class="benefit-card ${product.category}${owned && product.category !== "booster" ? " owned" : ""}">
+      <span class="benefit-icon">${product.icon}</span><span class="benefit-type">${labels[product.category]}</span>
+      <h3>${product.name}</h3><p>${product.detail}</p><small>${product.note}</small>
+      <div class="benefit-price"><span>${product.category === "booster" ? `持有 ${count}/${product.maxOwned}` : owned ? "已存入背包" : "每个存档限 1 件"}</span><span>◈ ${product.price}</span></div>
+      <button data-benefit-buy="${productId}" ${owned || !affordable ? "disabled" : ""}>${!affordable && !owned ? `还差 ${product.price - metaProgress.supplyCoins}` : buttonText}</button>
+    </article>`;
+  }
+
+  function renderBenefitStore() {
+    const sections = [
+      ["voucher", "权益兑换凭证", "当前仅记录游戏内兑换资格，不生成真实券码"],
+      ["booster", "轻量游戏补给", "每局最多携带一个，强度低于普通遗物"],
+      ["cosmetic", "永久外观", "只改变视觉表现，不影响伤害、生命或掉落"]
+    ];
+    return sections.map(([category, title, subtitle]) => `<section><div class="benefits-section-title"><h3>${title}</h3><span>${subtitle}</span></div><div class="benefits-grid">${Object.keys(benefitProducts).filter(id => benefitProducts[id].category === category).map(benefitCard).join("")}</div></section>`).join("");
+  }
+
+  function renderDailyMissions() {
+    ensureDailyMissions();
+    const daily = metaProgress.daily;
+    const cards = daily.taskIds.map(id => {
+      const mission = dailyMissionCatalog[id];
+      const progress = Math.min(mission.target, daily.progress[id] || 0);
+      const complete = progress >= mission.target;
+      const claimed = daily.claimed.includes(id);
+      return `<article class="mission-card"><div><h3>${mission.name}</h3><p>${mission.detail} · 奖励 ◈ ${mission.reward}</p></div><div><div class="mission-progress"><i style="width:${progress / mission.target * 100}%"></i></div><p>${progress}/${mission.target}</p></div><button data-mission-claim="${id}" ${!complete || claimed ? "disabled" : ""}>${claimed ? "已领取" : complete ? `领取 +${mission.reward}` : "进行中"}</button></article>`;
+    }).join("");
+    return `<div class="benefits-section-title"><h3>今日地牢悬赏</h3><span>${daily.date} · 每日本地刷新 · 今日登录已得 ◈ ${daily.loginReward}</span></div><div class="mission-grid">${cards}</div>`;
+  }
+
+  function backpackCard(productId) {
+    const product = benefitProducts[productId];
+    if (!product) return "";
+    if (product.category === "voucher") return `<article class="benefit-card voucher owned"><span class="benefit-icon">${product.icon}</span><span class="benefit-type">权益兑换凭证</span><h3>${product.name}</h3><p>${product.detail}</p><small>状态：活动测试 · 待正式权益开放</small><button disabled>尚不可核销</button></article>`;
+    const equipped = product.category === "booster" ? metaProgress.selectedBooster === productId : metaProgress.equippedCosmetics[product.slot] === productId;
+    const count = metaProgress.boosterInventory[productId] || 0;
+    return `<article class="benefit-card ${product.category}${equipped ? " owned" : ""}"><span class="benefit-icon">${product.icon}</span><span class="benefit-type">${product.category === "booster" ? `库存 ${count}` : "永久外观"}</span><h3>${product.name}</h3><p>${product.detail}</p><small>${equipped ? product.category === "booster" ? "已携带 · 开始下一局时消耗" : "当前已装备" : "当前未装备"}</small><button data-benefit-equip="${productId}">${equipped ? "卸下" : product.category === "booster" ? "下局携带" : "装备外观"}</button></article>`;
+  }
+
+  function renderBenefitsBackpack() {
+    const ids = [
+      ...metaProgress.vouchers.map(voucher => voucher.productId),
+      ...Object.keys(metaProgress.boosterInventory).filter(id => metaProgress.boosterInventory[id] > 0),
+      ...metaProgress.ownedCosmetics
+    ];
+    return ids.length ? `<div class="benefits-section-title"><h3>权益背包</h3><span>补给仅在开始下一局时消耗；兑换凭证当前不可核销</span></div><div class="benefits-grid">${ids.map(backpackCard).join("")}</div>` : `<div class="backpack-empty">背包还是空的。完成远征与每日悬赏获得补给币，再到商城兑换内容。</div>`;
+  }
+
+  function renderBenefits() {
+    ensureDailyMissions();
+    benefitsBalance.textContent = metaProgress.supplyCoins;
+    supplyBalanceBadge.textContent = metaProgress.supplyCoins;
+    benefitsNotice.textContent = benefitsMessage;
+    document.querySelectorAll("[data-benefits-tab]").forEach(button => button.classList.toggle("active", button.dataset.benefitsTab === benefitsTab));
+    benefitsContent.innerHTML = benefitsTab === "missions" ? renderDailyMissions() : benefitsTab === "backpack" ? renderBenefitsBackpack() : renderBenefitStore();
+  }
+
+  function setBenefitsOpen(open, tab = benefitsTab) {
+    benefitsOpen = Boolean(open);
+    benefitsTab = ["store", "missions", "backpack"].includes(tab) ? tab : "store";
+    if (benefitsOpen) {
+      setGuideOpen(false);
+      setWorkshopOpen(false);
+      resetInput();
+      renderBenefits();
+      benefitsPanel.classList.add("visible");
+      benefitsPanel.setAttribute("aria-hidden", "false");
+    } else {
+      benefitsPanel.classList.remove("visible");
+      benefitsPanel.setAttribute("aria-hidden", "true");
+      benefitsMessage = "";
+      if (game && game.state === "playing") requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
+    }
+  }
+
+  function calculateRunSupplyReward(won) {
+    if (!game || game.debugAssisted) return { base: 0, rooms: 0, kills: 0, bosses: 0, risk: 0, victory: 0, total: 0, eligible: false };
+    const combatRooms = game.rooms.filter(room => room.cleared && !["treasure", "shop", "sanctuary"].includes(room.kind)).length;
+    const activeRun = game.kills > 0 || combatRooms > 0;
+    const reward = {
+      base: activeRun ? 2 : 0,
+      rooms: Math.min(10, Math.floor(combatRooms / 2)),
+      kills: Math.min(8, Math.floor(game.kills / 6)),
+      bosses: Math.min(25, game.bossKills * 4),
+      risk: Math.min(6, game.routeChoices * 3),
+      victory: won ? 25 : 0,
+      eligible: true
+    };
+    reward.total = reward.base + reward.rooms + reward.kills + reward.bosses + reward.risk + reward.victory;
+    return reward;
+  }
+
+  function settleRunSupplyReward(won) {
+    if (game.supplySettlement) return game.supplySettlement;
+    const reward = calculateRunSupplyReward(won);
+    game.supplySettlement = reward;
+    metaProgress.supplyCoins += reward.total;
+    return reward;
+  }
+
+  function nextVoucherGoal() {
+    const productId = ["voucherBasic", "voucherPreferred", "voucherLimited"].find(id => !benefitOwned(id));
+    if (!productId) return "三档测试兑换凭证已全部收藏";
+    const product = benefitProducts[productId];
+    const missing = Math.max(0, product.price - metaProgress.supplyCoins);
+    return missing ? `距离${product.name}还差 ◈ ${missing}` : `已可兑换${product.name}`;
   }
 
   function isWeaponUnlocked(weapon) {
@@ -265,6 +516,7 @@
   function setGuideOpen(open) {
     guideOpen = Boolean(open);
     if (guideOpen) {
+      setBenefitsOpen(false);
       setWorkshopOpen(false);
       resetInput();
       renderGuide();
@@ -307,6 +559,7 @@
     clearInterval(workshopRefreshTimer);
     workshopRefreshTimer = 0;
     if (workshopOpen) {
+      setBenefitsOpen(false);
       guideOpen = false;
       guidePanel.classList.remove("visible");
       resetInput();
@@ -372,7 +625,8 @@
 
   function updateMetaUi() {
     const progress = document.querySelector("#meta-progress");
-    if (progress) progress.textContent = `远征 ${metaProgress.runs} · 通关 ${metaProgress.wins} · Boss 印记 ${metaProgress.bossDefeats} · 种子 ${metaProgress.seeds} · 已锻造 ${metaProgress.craftedWeapons.length}`;
+    if (progress) progress.textContent = `远征 ${metaProgress.runs} · 通关 ${metaProgress.wins} · Boss 印记 ${metaProgress.bossDefeats} · 补给币 ◈ ${metaProgress.supplyCoins}`;
+    if (supplyBalanceBadge) supplyBalanceBadge.textContent = metaProgress.supplyCoins;
     document.querySelectorAll(".weapon-card").forEach(button => {
       const unlocked = isWeaponUnlocked(button.dataset.weapon);
       button.disabled = !unlocked;
@@ -385,10 +639,16 @@
     });
   }
 
-  function recordBossDefeat() {
+  function recordBossDefeat(bossType) {
     const before = Object.fromEntries(Object.keys(weaponUnlocks).map(weapon => [weapon, isWeaponUnlocked(weapon)]));
     metaProgress.bossDefeats += 1;
     metaProgress.seeds += 2;
+    if (!game.debugAssisted && bossType && !metaProgress.defeatedBossTypes.includes(bossType)) {
+      metaProgress.defeatedBossTypes.push(bossType);
+      metaProgress.supplyCoins += 12;
+      game.supplyBonus = (game.supplyBonus || 0) + 12;
+      game.texts.push({ text: "首次领主悬赏 · 补给币 +12", x: ROOM_WIDTH / 2, y: 192, life: 3.2, color: "#ffd56e", size: 15 });
+    }
     const blueprint = Object.entries(weaponRecipes).find(([id, recipe]) => recipe.blueprintAt <= metaProgress.bossDefeats && !metaProgress.blueprints.includes(id));
     if (blueprint) {
       metaProgress.blueprints.push(blueprint[0]);
@@ -403,6 +663,43 @@
     }
     game.seedsFound += 2;
     saveMetaProgress();
+  }
+
+  function applySelectedBooster() {
+    const boosterId = metaProgress.selectedBooster;
+    if (!boosterId || !benefitProducts[boosterId] || (metaProgress.boosterInventory[boosterId] || 0) <= 0) return;
+    metaProgress.boosterInventory[boosterId] -= 1;
+    metaProgress.selectedBooster = null;
+    game.activeBooster = boosterId;
+    if (boosterId === "sparePlate") game.player.armor += 1;
+    if (boosterId === "luckyBadge") game.treasureRerolls = 1;
+    if (boosterId === "ration") game.rationReady = true;
+    game.texts.push({ text: `补给生效 · ${benefitProducts[boosterId].name}`, x: ROOM_WIDTH / 2, y: 150, life: 3, color: "#ffd56e", size: 15 });
+    saveMetaProgress();
+  }
+
+  function updateRerollControl() {
+    if (!rerollButton) return;
+    const room = game && game.rooms[game.room];
+    const available = Boolean(game && game.state === "playing" && room?.kind === "treasure" && !room.cleared && game.treasureRerolls > 0 && game.pickups.some(pickup => pickup.choiceGroup === "treasure" && !pickup.dead));
+    rerollButton.classList.toggle("active", available);
+    rerollButton.textContent = available ? `幸运刷新 · R · 剩余 ${game.treasureRerolls}` : "幸运刷新 · R";
+  }
+
+  function rerollTreasure() {
+    if (!game || game.state !== "playing") return false;
+    const room = game.rooms[game.room];
+    if (room.kind !== "treasure" || room.cleared || game.treasureRerolls <= 0) return false;
+    const treasurePickups = game.pickups.filter(pickup => pickup.choiceGroup === "treasure" && !pickup.dead);
+    if (!treasurePickups.length) return false;
+    room.choices = randomItems(3, heroes[game.player.hero].tag);
+    game.pickups = game.pickups.filter(pickup => pickup.choiceGroup !== "treasure");
+    room.choices.forEach((item, choice) => game.pickups.push({ x: ROOM_WIDTH / 2 + (choice - 1) * 170, y: ROOM_HEIGHT / 2, type: "item", item, phase: choice, choiceGroup: "treasure" }));
+    game.treasureRerolls -= 1;
+    game.texts.push({ text: "幸运徽章 · 宝藏已刷新", x: ROOM_WIDTH / 2, y: 132, life: 2.2, color: "#d7b8ff", size: 16 });
+    sound(520, .14, "sine", .015);
+    updateRerollControl();
+    return true;
   }
 
   function sound(frequency, duration = .06, type = "triangle", volume = .018) {
@@ -755,6 +1052,7 @@
   function newGame() {
     setGuideOpen(false);
     setWorkshopOpen(false);
+    setBenefitsOpen(false);
     keys.clear();
     pointer.down = false;
     pointer.moveDown = false;
@@ -786,6 +1084,12 @@
       bossMechanics: {},
       bossSignatures: {},
       bossSignatureResolutions: {},
+      debugAssisted: false,
+      activeBooster: null,
+      rationReady: false,
+      treasureRerolls: 0,
+      supplyBonus: 0,
+      supplySettlement: null,
       roomHit: false,
       synergies: {},
       itemStacks: {},
@@ -823,6 +1127,7 @@
     heroes[selectedHero].apply(game.player);
     applyStartingWeapon(game.player, isWeaponUnlocked(selectedWeapon) ? selectedWeapon : "repeater");
     enterRoom(0);
+    applySelectedBooster();
     startScreen.classList.remove("visible");
     endScreen.classList.remove("visible");
     gameShell.classList.add("playing");
@@ -883,6 +1188,11 @@
     game.transition = 1;
     const room = game.rooms[index];
     room.enemies.forEach(spawnEnemy);
+    if (room.kind === "boss" && game.rationReady) {
+      game.rationReady = false;
+      game.player.hp = Math.min(game.player.maxHp, game.player.hp + 1);
+      game.texts.push({ text: "旅行口粮 · 恢复半颗心", x: ROOM_WIDTH / 2, y: 156, life: 2.4, color: "#9ee3a8", size: 15 });
+    }
     if (room.kind === "sanctuary" && !room.cleared) {
       room.cleared = true;
       game.player.hp = Math.min(game.player.maxHp, game.player.hp + 3);
@@ -906,6 +1216,7 @@
     }
     createObstacles(room);
     if (room.cleared) game.doorOpen = true;
+    updateRerollControl();
   }
 
   function createObstacles(room) {
@@ -1262,11 +1573,13 @@
   function killEnemy(enemy) {
     enemy.dead = true;
     game.kills += 1;
+    recordDailyProgress("kills", 1);
     game.combo = Math.min(30, game.combo + 1);
     game.comboTimer = 3.5;
     if (isBoss(enemy)) {
       game.bossKills += 1;
-      recordBossDefeat();
+      recordDailyProgress("boss", 1);
+      recordBossDefeat(enemy.type);
     }
     if (isBoss(enemy)) game.arenaInset = 0;
     screenShake = isBoss(enemy) ? 18 : 5;
@@ -1425,6 +1738,7 @@
     if (!game.enemies.some(enemy => !enemy.dead) && !waitingForTreasure && !waitingForRoute && !game.doorOpen) {
       currentRoom.cleared = true;
       game.doorOpen = true;
+      if (!["treasure", "shop", "sanctuary"].includes(currentRoom.kind)) recordDailyProgress("rooms", 1);
       if (player.roomHeal > 0) player.hp = Math.min(player.maxHp, player.hp + player.roomHeal);
       if (!["treasure", "shop"].includes(currentRoom.kind) && !game.roomHit) {
         game.perfectRooms += 1;
@@ -1502,10 +1816,11 @@
       if (bullet.trailCooldown <= 0) {
         bullet.trailCooldown = bullet.weapon === "prism" ? .026 : ["seeker", "orbit", "wisp"].includes(bullet.weapon) ? .045 : .075;
         const trailColors = { repeater: "#f1c773", scatter: "#f28654", wisp: "#bfa8ff", seeker: "#79f2d0", prism: "#a8e8ff", orbit: "#ff719f" };
+        const cosmeticTrail = metaProgress.equippedCosmetics.projectile === "redTrail" ? "#ff594d" : null;
         game.particles.push({
           x: bullet.x, y: bullet.y, vx: -bullet.vx * .025, vy: -bullet.vy * .025,
           life: bullet.weapon === "prism" ? .24 : .16, maxLife: bullet.weapon === "prism" ? .24 : .16,
-          color: trailColors[bullet.weapon] || "#f1c773",
+          color: cosmeticTrail || trailColors[bullet.weapon] || "#f1c773",
           size: bullet.weapon === "prism" ? 4.5 : ["seeker", "orbit", "wisp"].includes(bullet.weapon) ? 3.2 : 2.2,
           star: bullet.weapon === "prism", glow: ["wisp", "seeker", "prism", "orbit"].includes(bullet.weapon)
         });
@@ -1575,6 +1890,7 @@
         bullet.life = 0;
         if (player.roll > 0) {
           game.evades += 1;
+          recordDailyProgress("evades", 1);
           player.evadeCount += 1;
           directionalBurst(player.x, player.y, Math.atan2(bullet.vy, bullet.vx), "#b9f2ff", 9, 165);
           if (player.evadeCount % 4 === 0) game.texts.push({ text: `连续闪避 ×${player.evadeCount}`, x: player.x, y: player.y - 36, life: .65, color: "#b9f2ff", size: 13, velocityY: -24 });
@@ -2580,6 +2896,7 @@
     }
     game.player.coins -= pickup.price;
     game.shopPurchases += 1;
+    recordDailyProgress("shop", 1);
     collectPickup(pickup);
     game.texts.push({ text: `购买成功 · 余 ${game.player.coins} 枚`, x: pickup.homeX, y: pickup.homeY - 46, life: 1.2, color: "#91dfaa", size: 15 });
     return true;
@@ -2595,6 +2912,7 @@
       if (pickup.choiceGroup) {
         game.pickups.forEach(candidate => { if (candidate.choiceGroup === pickup.choiceGroup && candidate !== pickup) candidate.dead = true; });
         if (game.rooms[game.room].kind === "treasure" && game.room < game.rooms.length - 1) openRouteChoice();
+        updateRerollControl();
       }
     }
     burst(pickup.x, pickup.y, "#74d69b", 12, 120);
@@ -2670,6 +2988,7 @@
       nextRoom.modifier = "cursed";
       nextRoom.riskReward = 2;
       game.texts.push({ text: "选择双誓险路 · 高危高报酬", x: ROOM_WIDTH / 2, y: 132, life: 1.8, color: option.color });
+      recordDailyProgress("risk", 1);
     }
     game.routeChoice = null;
     game.doorOpen = true;
@@ -2726,6 +3045,7 @@
       metaProgress.runs += 1;
       if (won) metaProgress.wins += 1;
       metaProgress.bestKills = Math.max(metaProgress.bestKills, game.kills);
+      settleRunSupplyReward(won);
       saveMetaProgress();
     }
     game.state = "ended";
@@ -2741,7 +3061,10 @@
     const damageSummary = topSource ? `${sourceLabels[topSource[0]] || topSource[0]} ${Math.round(topSource[1])}` : "无";
     const deathSummary = won ? "完成净化" : game.lastDamageSource;
     const unlockSummary = game.unlocks.length ? `<span>新解锁 ${game.unlocks.join(" / ")}</span>` : "";
-    document.querySelector("#end-stats").innerHTML = `<span>${heroes[game.player.hero].name} · ${weaponNames[game.player.weapon]}</span><span>击败 ${game.kills}</span><span>Boss ${game.bossKills}/11</span><span>终路 ${game.finalBranch === "sheol" ? "魔窟" : game.finalBranch === "cathedral" ? "圣堂" : "未选择"}</span><span>遗物 ${game.itemsFound}</span><span>种子 ${game.seedsFound}</span><span>完美闪避 ${game.evades}</span><span>无伤房 ${game.perfectRooms}</span><span>总伤害 ${Math.round(game.damageDealt)}</span><span>主力输出 ${damageSummary}</span><span>承受伤害 ${game.damageTaken.toFixed(1)}</span><span>${won ? "结局" : "死因"} ${deathSummary}</span><span>存活 ${minutes}:${seconds}</span><span>关卡 ${game.room + 1}/${game.rooms.length}</span>${unlockSummary}`;
+    const supplyReward = game.supplySettlement || calculateRunSupplyReward(won);
+    const supplySummary = supplyReward.eligible ? `补给币 +${supplyReward.total}${game.supplyBonus ? ` · 首领首胜 +${game.supplyBonus}` : ""}` : "调试局不结算补给币";
+    document.querySelector("#end-stats").innerHTML = `<span>${heroes[game.player.hero].name} · ${weaponNames[game.player.weapon]}</span><span>击败 ${game.kills}</span><span>Boss ${game.bossKills}/11</span><span>终路 ${game.finalBranch === "sheol" ? "魔窟" : game.finalBranch === "cathedral" ? "圣堂" : "未选择"}</span><span>遗物 ${game.itemsFound}</span><span>种子 ${game.seedsFound}</span><span>完美闪避 ${game.evades}</span><span>无伤房 ${game.perfectRooms}</span><span>总伤害 ${Math.round(game.damageDealt)}</span><span>主力输出 ${damageSummary}</span><span>承受伤害 ${game.damageTaken.toFixed(1)}</span><span>${won ? "结局" : "死因"} ${deathSummary}</span><span>存活 ${minutes}:${seconds}</span><span>关卡 ${game.room + 1}/${game.rooms.length}</span><span class="supply-earned">${supplySummary}</span>${unlockSummary}`;
+    document.querySelector("#end-supply-progress").textContent = `${nextVoucherGoal()} · 当前持有 ◈ ${metaProgress.supplyCoins}`;
     endScreen.classList.add("visible");
   }
 
@@ -4665,10 +4988,11 @@
       const endAngle = slash.angle + slash.arc / 2 + progress * .22;
       const waveStart = slash.angle - slash.waveArc / 2 + progress * .16;
       const waveEnd = slash.angle + slash.waveArc / 2 + progress * .16;
+      const redSlash = metaProgress.equippedCosmetics.cleaver === "redSlash";
       context.save();
       context.globalAlpha = clamp(slash.life / slash.maxLife, 0, 1);
-      context.strokeStyle = slash.critical ? "#ffd86e" : "#79c9d5";
-      context.shadowColor = slash.critical ? "#f1a647" : "#5eb5ca";
+      context.strokeStyle = slash.critical ? "#ffd86e" : redSlash ? "#ff4f56" : "#79c9d5";
+      context.shadowColor = slash.critical ? "#f1a647" : redSlash ? "#c51f35" : "#5eb5ca";
       context.shadowBlur = slash.critical ? 22 : 14;
       context.lineWidth = 5 * (1 - progress * .5);
       context.beginPath(); context.arc(slash.x, slash.y, slash.waveRadius * (.76 + progress * .23), waveStart, waveEnd); context.stroke();
@@ -4700,7 +5024,7 @@
         context.fill();
       }
       context.globalAlpha *= .45;
-      context.strokeStyle = "#b9f4ff";
+      context.strokeStyle = redSlash ? "#ff9b87" : "#b9f4ff";
       context.lineWidth = 2;
       context.beginPath(); context.arc(slash.x, slash.y, slash.guardRadius * (1 + progress * .12), 0, TAU); context.stroke();
       context.restore();
@@ -4868,7 +5192,8 @@
 
   function drawBullets() {
     for (const bullet of game.bullets) {
-      const bulletColor = bullet.weapon === "seeker" ? "#87f5d6" : bullet.weapon === "prism" ? "#a5e7ff" : bullet.weapon === "orbit" ? "#ff719c" : bullet.weapon === "wisp" ? "#d7c4ff" : bullet.weapon === "scatter" ? "#ffc07a" : bullet.coin ? "#ffe079" : bullet.chain ? "#d6c4ff" : bullet.explosion ? "#ffc079" : bullet.critical ? "#fffbd1" : "#fff0a6";
+      const defaultBulletColor = bullet.weapon === "seeker" ? "#87f5d6" : bullet.weapon === "prism" ? "#a5e7ff" : bullet.weapon === "orbit" ? "#ff719c" : bullet.weapon === "wisp" ? "#d7c4ff" : bullet.weapon === "scatter" ? "#ffc07a" : bullet.coin ? "#ffe079" : bullet.chain ? "#d6c4ff" : bullet.explosion ? "#ffc079" : bullet.critical ? "#fffbd1" : "#fff0a6";
+      const bulletColor = metaProgress.equippedCosmetics.projectile === "redTrail" ? bullet.critical ? "#fff0a3" : "#ff6454" : defaultBulletColor;
       context.save();
       context.strokeStyle = bulletColor;
       context.shadowColor = bulletColor;
@@ -5278,7 +5603,8 @@
     drawHudPanel(x, y, 190, 38);
     context.fillStyle = hero.color;
     context.font = "900 11px system-ui";
-    context.fillText(`${hero.name} · ${weaponNames[player.weapon]} Lv.${player.weaponLevel}`, x + 12, y + 16);
+    const title = metaProgress.equippedCosmetics.title === "supplyTitle" ? "补给先锋 · " : "";
+    context.fillText(`${title}${hero.name} · ${weaponNames[player.weapon]} Lv.${player.weaponLevel}`, x + 12, y + 16);
     context.fillStyle = "#44383d";
     context.fillRect(x + 12, y + 24, 164, 5);
     context.fillStyle = player.skillCooldown <= 0 ? "#efd06e" : hero.color;
@@ -5380,7 +5706,7 @@
     const dt = Math.min((time - lastTime) / 1000 || 0, .033);
     lastTime = time;
     if (hitStop > 0) hitStop = Math.max(0, hitStop - dt);
-    else if (!guideOpen && !workshopOpen) update(dt);
+    else if (!guideOpen && !workshopOpen && !benefitsOpen) update(dt);
     render();
     requestAnimationFrame(frame);
   }
@@ -5396,16 +5722,21 @@
     w: "KeyW", a: "KeyA", s: "KeyS", d: "KeyD",
     ArrowUp: "ArrowUp", ArrowDown: "ArrowDown",
     ArrowLeft: "ArrowLeft", ArrowRight: "ArrowRight",
-    " ": "Space", Spacebar: "Space", q: "KeyQ", Q: "KeyQ"
+    " ": "Space", Spacebar: "Space", q: "KeyQ", Q: "KeyQ", r: "KeyR", R: "KeyR"
   };
 
   function normalizedCode(event) {
-    if (["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) return event.code;
+    if (["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyR", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) return event.code;
     return keyAliases[event.key] || keyAliases[String(event.key).toLowerCase()] || event.code;
   }
 
   function handleKeyDown(event) {
     const code = normalizedCode(event);
+    if (code === "Escape" && benefitsOpen) {
+      event.preventDefault();
+      setBenefitsOpen(false);
+      return;
+    }
     if (code === "Escape" && workshopOpen) {
       event.preventDefault();
       setWorkshopOpen(false);
@@ -5416,10 +5747,15 @@
       setGuideOpen(code === "Escape" ? false : !guideOpen);
       return;
     }
-    if (guideOpen) return;
+    if (guideOpen || workshopOpen || benefitsOpen) return;
     if (game && game.routeChoice && ["Digit1", "Digit2"].includes(code)) {
       event.preventDefault();
       chooseRoute(game.routeChoice.options[code === "Digit1" ? 0 : 1].id);
+      return;
+    }
+    if (code === "KeyR") {
+      event.preventDefault();
+      if (!event.repeat) rerollTreasure();
       return;
     }
     if (!["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(code)) return;
@@ -5566,6 +5902,31 @@
   document.querySelector("#guide-close").addEventListener("click", () => setGuideOpen(false));
   document.querySelector("#workshop-button").addEventListener("click", () => setWorkshopOpen(!workshopOpen));
   document.querySelector("#workshop-close").addEventListener("click", () => setWorkshopOpen(false));
+  document.querySelector("#benefits-button").addEventListener("click", () => setBenefitsOpen(!benefitsOpen));
+  document.querySelector("#benefits-close").addEventListener("click", () => setBenefitsOpen(false));
+  document.querySelector("#end-benefits-button").addEventListener("click", () => setBenefitsOpen(true));
+  rerollButton.addEventListener("click", rerollTreasure);
+  benefitsPanel.addEventListener("click", event => {
+    const tab = event.target.closest("[data-benefits-tab]");
+    if (tab) {
+      benefitsTab = tab.dataset.benefitsTab;
+      benefitsMessage = "";
+      renderBenefits();
+      return;
+    }
+    const purchase = event.target.closest("[data-benefit-buy]");
+    if (purchase) {
+      purchaseBenefit(purchase.dataset.benefitBuy);
+      return;
+    }
+    const equip = event.target.closest("[data-benefit-equip]");
+    if (equip) {
+      equipBenefit(equip.dataset.benefitEquip);
+      return;
+    }
+    const mission = event.target.closest("[data-mission-claim]");
+    if (mission) claimDailyMission(mission.dataset.missionClaim);
+  });
   farmPlots.addEventListener("click", event => {
     const plot = event.target.closest("[data-plot]");
     if (plot) interactFarmPlot(Number(plot.dataset.plot));
@@ -5575,14 +5936,39 @@
     if (recipe) craftWeapon(recipe.dataset.craft);
   });
 
+  function benefitsState() {
+    ensureDailyMissions();
+    return {
+      open: benefitsOpen,
+      tab: benefitsTab,
+      balance: metaProgress.supplyCoins,
+      productCount: Object.keys(benefitProducts).length,
+      vouchers: metaProgress.vouchers.map(voucher => ({ ...voucher })),
+      boosterInventory: { ...metaProgress.boosterInventory },
+      selectedBooster: metaProgress.selectedBooster,
+      ownedCosmetics: [...metaProgress.ownedCosmetics],
+      equippedCosmetics: { ...metaProgress.equippedCosmetics },
+      daily: {
+        ...metaProgress.daily,
+        taskIds: [...metaProgress.daily.taskIds],
+        progress: { ...metaProgress.daily.progress },
+        claimed: [...metaProgress.daily.claimed]
+      },
+      missions: Object.fromEntries(Object.entries(dailyMissionCatalog).map(([id, mission]) => [id, { ...mission }])),
+      products: Object.fromEntries(Object.entries(benefitProducts).map(([id, product]) => [id, { ...product }]))
+    };
+  }
+
   window.__game = {
     start: newGame,
     getState() {
-      if (!game) return { state: "menu" };
+      if (!game) return { state: "menu", benefitsOpen, benefits: benefitsState() };
       return {
         state: game.state,
         guideOpen,
         workshopOpen,
+        benefitsOpen,
+        benefits: benefitsState(),
         viewport: {
           width, height, scaleX: scale, scaleY: verticalScale, offsetX, offsetY,
           roomWidth: ROOM_WIDTH, roomHeight: ROOM_HEIGHT,
@@ -5661,6 +6047,10 @@
         coins: game.player.coins,
         seedsFound: game.seedsFound,
         evades: game.evades,
+        activeBooster: game.activeBooster,
+        treasureRerolls: game.treasureRerolls,
+        supplyReward: game.supplySettlement ? { ...game.supplySettlement } : null,
+        debugAssisted: game.debugAssisted,
         skillCooldown: game.player.skillCooldown,
         input: { firing: pointer.down, firePointerId: pointer.firePointerId, stickPointerId: touchMove.pointerId },
         feedback: {
@@ -5705,6 +6095,7 @@
     },
     clearRoom() {
       if (!game || game.state !== "playing") return;
+      game.debugAssisted = true;
       game.suppressSpawns = true;
       game.enemies.slice().forEach(killEnemy);
       game.suppressSpawns = false;
@@ -5729,11 +6120,15 @@
     chooseRoute,
     goToRoom(index) {
       if (!game || game.state !== "playing" || !Number.isInteger(index) || index < 0 || index >= game.rooms.length) return;
+      game.debugAssisted = true;
       enterRoom(index);
     },
     giveItem(id) {
       const item = items.find(candidate => candidate.id === id);
-      if (game && item) grantItem(item);
+      if (game && item) {
+        game.debugAssisted = true;
+        grantItem(item);
+      }
     },
     inflictStatus(type, duration = 3) {
       const enemy = game && game.enemies.find(candidate => !candidate.dead);
@@ -5744,11 +6139,13 @@
     setBossHealthRatio(ratio) {
       const boss = game && game.enemies.find(enemy => isBoss(enemy));
       if (!boss) return;
+      game.debugAssisted = true;
       boss.hp = Math.max(1, boss.maxHp * clamp(ratio, .01, 1));
     },
     damageBoss(amount, skill = false) {
       const boss = game && game.enemies.find(enemy => isBoss(enemy));
       if (!boss) return;
+      game.debugAssisted = true;
       damageEnemy(boss, Math.max(0, amount), { x: game.player.x, y: game.player.y, skill });
     },
     triggerBossSignature() {
@@ -5767,6 +6164,7 @@
     },
     setPlayerInvincible(seconds = 30) {
       if (!game || game.state !== "playing") return false;
+      game.debugAssisted = true;
       game.player.invincible = Math.max(game.player.invincible, Math.max(0, seconds));
       return true;
     },
@@ -5780,6 +6178,7 @@
       if (!heroes[id]) return false;
       selectedHero = id;
       newGame();
+      game.debugAssisted = true;
       game.enemies.length = 0;
       game.enemyBullets.length = 0;
       game.bullets.length = 0;
@@ -5799,6 +6198,7 @@
     showcaseEnemy(type, stage = 1) {
       const regularTypes = ["grunt", "turret", "charger", "bat", "splitter", "leech", "cultist", "bomber"];
       if (!game || (!regularTypes.includes(type) && !bossProfiles[type])) return false;
+      game.debugAssisted = true;
       game.enemies.length = 0;
       game.enemyBullets.length = 0;
       game.bullets.length = 0;
@@ -5855,6 +6255,26 @@
     toggleWorkshop(open) {
       setWorkshopOpen(open === undefined ? !workshopOpen : open);
     },
+    toggleBenefits(open, tab) {
+      setBenefitsOpen(open === undefined ? !benefitsOpen : open, tab);
+    },
+    addSupplyCoins(amount = 1) {
+      metaProgress.supplyCoins += Math.max(0, Math.floor(amount));
+      saveMetaProgress();
+      return metaProgress.supplyCoins;
+    },
+    purchaseBenefit,
+    equipBenefit,
+    claimDailyMission,
+    progressDailyMission(id, amount = 1) {
+      ensureDailyMissions();
+      const mission = dailyMissionCatalog[id];
+      if (!mission || !metaProgress.daily.taskIds.includes(id)) return false;
+      metaProgress.daily.progress[id] = Math.min(mission.target, (metaProgress.daily.progress[id] || 0) + Math.max(0, amount));
+      saveMetaProgress();
+      return true;
+    },
+    rerollTreasure,
     addSeeds(amount = 1) {
       metaProgress.seeds += Math.max(0, Math.floor(amount));
       saveMetaProgress();
@@ -5892,7 +6312,8 @@
   };
 
   resize();
-  updateMetaUi();
+  if (ensureDailyMissions()) saveMetaProgress();
+  else updateMetaUi();
   if (window.location && window.location.search.includes("autostart=1")) newGame();
   requestAnimationFrame(frame);
 })();

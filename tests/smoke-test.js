@@ -10,7 +10,7 @@ function element(id) {
   if (!elements.has(id)) {
     elements.set(id, {
       style: {}, innerHTML: "", textContent: "", handlers: {},
-      classList: { add() {}, remove() {} },
+      classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
       addEventListener(type, callback) { (this.handlers[type] ||= []).push(callback); },
       setPointerCapture() {}, releasePointerCapture() {}, hasPointerCapture() { return true; }, focus() {}, setAttribute() {},
       closest() { return null; },
@@ -406,6 +406,70 @@ game.selectWeapon("cleaver");
 game.start();
 step();
 assert(game.getState().stats.weapon === "cleaver", "Unlocked starting weapon selection failed");
+
+state = game.getState();
+assert(state.benefits.productCount === 9 && state.benefits.balance >= 5, "Benefits store catalog or daily login reward failed");
+assert(Object.values(state.benefits.products).filter(product => product.category === "voucher").length === 3, "Virtual voucher catalog failed");
+assert(Object.values(state.benefits.products).filter(product => product.category === "booster").length === 3, "Light booster catalog failed");
+assert(Object.values(state.benefits.products).filter(product => product.category === "cosmetic").length === 3, "Cosmetic catalog failed");
+game.toggleBenefits(true, "store");
+assert(game.getState().benefitsOpen, "Benefits store did not open");
+game.toggleBenefits(false);
+
+game.addSupplyCoins(1000);
+const voucherBalance = game.getState().benefits.balance;
+assert(game.purchaseBenefit("voucherBasic"), "Virtual voucher purchase failed");
+assert(!game.purchaseBenefit("voucherBasic"), "Limited virtual voucher was purchased twice");
+state = game.getState();
+assert(state.benefits.balance === voucherBalance - 100 && state.benefits.vouchers.length === 1 && state.benefits.vouchers[0].status === "pending", "Virtual voucher ledger failed");
+
+assert(game.purchaseBenefit("redTrail"), "Cosmetic purchase failed");
+state = game.getState();
+assert(state.benefits.ownedCosmetics.includes("redTrail") && state.benefits.equippedCosmetics.projectile === "redTrail", "Cosmetic ownership or auto-equip failed");
+assert(game.equipBenefit("redTrail") && game.getState().benefits.equippedCosmetics.projectile === null, "Cosmetic unequip failed");
+assert(game.equipBenefit("redTrail") && game.getState().benefits.equippedCosmetics.projectile === "redTrail", "Cosmetic re-equip failed");
+
+assert(game.purchaseBenefit("sparePlate"), "Light booster purchase failed");
+state = game.getState();
+assert(state.benefits.selectedBooster === "sparePlate" && state.benefits.boosterInventory.sparePlate === 1, "Booster was not queued for the next run");
+game.start();
+step();
+state = game.getState();
+assert(state.activeBooster === "sparePlate" && state.stats.armor >= 1 && state.benefits.boosterInventory.sparePlate === 0, "One-run shield booster was not consumed or applied");
+const shieldBoosterHp = state.hp;
+game.hurt(1);
+assert(game.getState().hp === shieldBoosterHp, "Light shield booster did not absorb exactly one hit");
+
+assert(game.purchaseBenefit("luckyBadge"), "Treasure reroll booster purchase failed");
+game.start();
+step();
+game.goToRoom(1);
+assert(game.getState().treasureRerolls === 1 && game.rerollTreasure(), "Treasure reroll booster did not activate");
+assert(game.getState().treasureRerolls === 0, "Treasure reroll was not consumed");
+
+assert(game.purchaseBenefit("ration"), "Ration booster purchase failed");
+game.start();
+step();
+game.hurt(1);
+const rationDamagedHp = game.getState().hp;
+game.goToRoom(4);
+assert(game.getState().hp === Math.min(game.getState().maxHp, rationDamagedHp + 1), "Ration did not restore half a heart before the first boss");
+
+state = game.getState();
+const dailyMissionId = state.benefits.daily.taskIds[0];
+const dailyReward = state.benefits.missions[dailyMissionId].reward;
+const dailyBalance = state.benefits.balance;
+assert(game.progressDailyMission(dailyMissionId, 999) && game.claimDailyMission(dailyMissionId), "Daily mission claim failed");
+assert(game.getState().benefits.balance === dailyBalance + dailyReward && !game.claimDailyMission(dailyMissionId), "Daily mission reward was not idempotent");
+
+const debugBalance = game.getState().benefits.balance;
+game.start();
+step();
+game.goToRoom(4);
+game.hurt(99);
+step();
+assert(game.getState().outcome === "defeat" && game.getState().debugAssisted, "Debug-assisted run state failed");
+assert(game.getState().benefits.balance === debugBalance && game.getState().supplyReward.total === 0, "Debug-assisted run incorrectly granted supply coins");
 
 game.start();
 step();

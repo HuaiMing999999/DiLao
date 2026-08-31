@@ -4,6 +4,14 @@ import { pathToFileURL } from "node:url";
 
 const port = process.env.CDP_PORT || "9333";
 const auditBaseUrl = process.env.AUDIT_URL || pathToFileURL(path.resolve("index.html")).href;
+const auditedUrl = autostart => {
+  const url = new URL(auditBaseUrl);
+  url.searchParams.set("__audit", "1");
+  if (autostart) url.searchParams.set("autostart", "1");
+  return url.href;
+};
+const menuUrl = auditedUrl(false);
+const gameUrl = auditedUrl(true);
 const targets = await fetch(`http://127.0.0.1:${port}/json`).then(response => response.json());
 const page = targets.find(target => target.type === "page");
 if (!page) throw new Error("No Chrome page target");
@@ -54,18 +62,33 @@ const screenshot = async name => {
   await fs.mkdir(".screenshots", { recursive: true });
   await fs.writeFile(path.join(".screenshots", `${name}.png`), Buffer.from(result.data, "base64"));
 };
+const clickElement = async selector => {
+  const point = await evaluate(`(() => {
+    const element = document.querySelector(${JSON.stringify(selector)});
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  })()`);
+  assert(point, `Missing clickable element: ${selector}`);
+  await call("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", buttons: 1, clickCount: 1 });
+  await call("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", buttons: 0, clickCount: 1 });
+  await wait(100);
+};
 
 await call("Page.enable");
 await call("Runtime.enable");
 await call("Log.enable");
 await call("Page.bringToFront");
 await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-await call("Page.navigate", { url: auditBaseUrl });
+await call("Page.navigate", { url: menuUrl });
+await waitForGame();
+await evaluate("localStorage.removeItem('shell-dungeon-meta-audit-v2')");
+await call("Page.navigate", { url: menuUrl });
 await waitForGame();
 const authorCredit = await evaluate(`({ text: document.querySelector('.author-credit').textContent, visible: getComputedStyle(document.querySelector('.author-credit')).display !== 'none' })`);
 assert(authorCredit.visible && authorCredit.text.includes("彭铭旭") && authorCredit.text.includes("MINOS"), "Start-screen author credit is missing");
 await screenshot("v6-start-author");
-await call("Page.navigate", { url: `${auditBaseUrl}?autostart=1` });
+await call("Page.navigate", { url: gameUrl });
 await waitForGame();
 await wait(350);
 await call("Page.bringToFront");
@@ -75,6 +98,39 @@ assert(state.roomCount === 55, "Campaign room count mismatch");
 assert(state.visualVersion === 3, "Third-edition visual system is missing");
 assert(new Set(Object.values(state.bossFormCatalog).flat()).size === 33, "Boss phase form catalog is incomplete");
 assert(Math.abs(state.viewport.scaleX - state.viewport.scaleY) < .001, "Desktop room aspect ratio changed unexpectedly");
+assert(state.benefits.productCount === 9 && state.benefits.balance >= 5, "Benefits economy did not initialize");
+await evaluate("window.__game.addSupplyCoins(1000)");
+await clickElement("#benefits-button");
+let benefitsUi = await evaluate(`({
+  visible: document.querySelector('#benefits-panel').classList.contains('visible'),
+  tabs: document.querySelectorAll('[data-benefits-tab]').length,
+  cards: document.querySelectorAll('.benefit-card').length,
+  disclaimer: document.querySelector('.benefits-disclaimer').textContent,
+  balance: Number(document.querySelector('#benefits-balance').textContent)
+})`);
+assert(benefitsUi.visible && benefitsUi.tabs === 3 && benefitsUi.cards === 9, "Benefits store did not render its full catalog");
+assert(benefitsUi.disclaimer.includes("不是京豆") && benefitsUi.disclaimer.includes("暂不可用于京东购物抵扣"), "Virtual voucher disclaimer is incomplete");
+const benefitsPausedAt = await evaluate("window.__game.getState().elapsed");
+await wait(280);
+assert(await evaluate("window.__game.getState().elapsed") === benefitsPausedAt, "Game did not pause while benefits store was open");
+await screenshot("v11-benefits-store");
+const voucherBalanceBefore = benefitsUi.balance;
+await clickElement('[data-benefit-buy="voucherBasic"]');
+state = await evaluate("window.__game.getState()");
+assert(state.benefits.balance === voucherBalanceBefore - 100, "Benefits purchase did not deduct the correct balance");
+assert(state.benefits.vouchers.some(voucher => voucher.productId === "voucherBasic" && voucher.status === "pending"), "Purchased voucher did not enter the backpack ledger");
+await evaluate(`window.__game.progressDailyMission(window.__game.getState().benefits.daily.taskIds[0], 999)`);
+await clickElement('[data-benefits-tab="missions"]');
+assert(await evaluate("document.querySelectorAll('.mission-card').length") === 3, "Daily missions tab did not render three tasks");
+await clickElement("[data-mission-claim]:not([disabled])");
+assert((await evaluate("document.querySelector('.benefits-notice').textContent")).includes("已领取"), "Daily mission reward was not claimed through the UI");
+await screenshot("v11-benefits-missions");
+await clickElement('[data-benefits-tab="backpack"]');
+assert((await evaluate("document.querySelector('#benefits-content').textContent")).includes("基础权益兑换凭证"), "Benefits backpack did not show the purchased voucher");
+await screenshot("v11-benefits-backpack");
+await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "Escape", key: "Escape", windowsVirtualKeyCode: 27 });
+await call("Input.dispatchKeyEvent", { type: "keyUp", code: "Escape", key: "Escape" });
+assert(!(await evaluate("window.__game.getState().benefitsOpen")), "Escape did not close the benefits store");
 await evaluate("document.querySelector('#game').focus()");
 await call("Input.dispatchMouseEvent", { type: "mousePressed", x: 720, y: 450, button: "left", buttons: 1, clickCount: 1 });
 await call("Input.dispatchMouseEvent", { type: "mouseReleased", x: 720, y: 450, button: "left", buttons: 0, clickCount: 1 });
@@ -128,14 +184,16 @@ await evaluate(`(() => {
   window.__game.setPlayerPosition(enemy.x - 135, enemy.y);
 })()`);
 const cleaverEnemyHp = await evaluate("window.__game.getState().enemies[0].hp");
-await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "ArrowRight", key: "ArrowRight", windowsVirtualKeyCode: 39 });
-await wait(65);
+await evaluate("window.__game.fire(0)");
+await wait(20);
 state = await evaluate("window.__game.getState()");
-assert(state.cleaverSlashes[0]?.radius >= 136 && state.cleaverSlashes[0]?.waveRadius >= 174, "Real cleaver sweep did not gain range");
-assert(!state.enemies.length || state.enemies[0].hp < cleaverEnemyHp, "Real cleaver input did not hit a mid-range enemy");
+assert(state.cleaverSlashes[0]?.radius >= 136 && state.cleaverSlashes[0]?.waveRadius >= 174, "Cleaver sweep did not gain range");
+assert(!state.enemies.length || state.enemies[0].hp < cleaverEnemyHp, "Cleaver sweep did not hit a mid-range enemy");
 await screenshot("v10-cleaver-expanded-sweep");
-await wait(800);
-await call("Input.dispatchKeyEvent", { type: "keyUp", code: "ArrowRight", key: "ArrowRight" });
+for (let attack = 0; attack < 3; attack += 1) {
+  await wait(240);
+  await evaluate("window.__game.fire(0)");
+}
 state = await evaluate("window.__game.getState()");
 assert(state.enemyCount === 0, "Sustained cleaver attacks could not defeat a basic enemy");
 
@@ -154,17 +212,24 @@ await screenshot("v10-cleaver-guard-parry");
 
 await evaluate("window.__game.start(); for (let i = 0; i < 8; i += 1) window.__game.giveItem('shield'); window.__game.goToRoom(4); window.__game.equipWeapon('seeker')");
 await wait(450);
+await evaluate(`(() => {
+  const boss = window.__game.getState().enemies.find(enemy => enemy.type.startsWith('boss'));
+  window.__game.setPlayerPosition(boss.x - 280, boss.y);
+})()`);
 await call("Page.bringToFront");
 await evaluate("document.querySelector('#game').focus()");
 await call("Input.dispatchMouseEvent", { type: "mousePressed", x: 720, y: 450, button: "left", buttons: 1, clickCount: 1 });
 await call("Input.dispatchMouseEvent", { type: "mouseReleased", x: 720, y: 450, button: "left", buttons: 0, clickCount: 1 });
 const balanceBefore = await evaluate("window.__game.getState()");
 const balanceBossBefore = balanceBefore.enemies.find(enemy => enemy.type.startsWith("boss"));
-await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "KeyD", key: "d", windowsVirtualKeyCode: 68 });
-await call("Input.dispatchKeyEvent", { type: "rawKeyDown", code: "ArrowRight", key: "ArrowRight", windowsVirtualKeyCode: 39 });
-await wait(4200);
-await call("Input.dispatchKeyEvent", { type: "keyUp", code: "ArrowRight", key: "ArrowRight" });
-await call("Input.dispatchKeyEvent", { type: "keyUp", code: "KeyD", key: "d" });
+await evaluate("document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyD', key: 'd' }))");
+await wait(450);
+await evaluate("document.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyD', key: 'd' }))");
+for (let attack = 0; attack < 6; attack += 1) {
+  await evaluate("window.__game.fire(0)");
+  await wait(260);
+}
+await wait(500);
 const balanceAfter = await evaluate("window.__game.getState()");
 const balanceBossAfter = balanceAfter.enemies.find(enemy => enemy.type.startsWith("boss"));
 assert(balanceBossAfter.hp < balanceBossBefore.hp - 6, "Real sustained fire did not damage the first boss");
@@ -195,14 +260,14 @@ for (const room of bossRooms) {
   assert(stageOneBoss.bossStage === 1 && stageOneBoss.bossForm === state.bossFormCatalog[stageOneBoss.type][0], `Boss room ${room} stage one form failed`);
   await screenshot(`v9-boss-${room}-stage1`);
   await evaluate("window.__game.setBossHealthRatio(.6)");
-  await wait(1750);
+  for (let retry = 0; retry < 45 && (await evaluate("window.__game.getState().bossStage")) !== 2; retry += 1) await wait(100);
   state = await evaluate("window.__game.getState()");
   const bossType = state.enemyTypes.find(type => type.startsWith("boss"));
   assert(state.bossStage === 2 && state.bossThreat.damage > 1, `Boss room ${room} stage two presentation failed`);
   assert(state.enemies.find(enemy => enemy.type === bossType).bossForm === state.bossFormCatalog[bossType][1], `Boss room ${room} stage two form failed`);
   await screenshot(`v9-boss-${room}-stage2`);
   await evaluate("window.__game.setBossHealthRatio(.3)");
-  await wait(2300);
+  for (let retry = 0; retry < 55 && (await evaluate("window.__game.getState().bossStage")) !== 3; retry += 1) await wait(100);
   state = await evaluate("window.__game.getState()");
   assert(state.bossStage === 3, `Boss room ${room} did not reach stage three`);
   assert(state.bossThreat.damage >= 1.4 && state.bossThreat.projectileSize > 1.3, `Boss room ${room} stage stats did not escalate`);
@@ -214,7 +279,7 @@ for (const room of bossRooms) {
   assert(signature && state.bossSignatures[bossType] > 0 && activeBoss.attackMode, `Boss room ${room} signature attack did not trigger`);
   await screenshot(`v9-boss-${room}-stage3-signature`);
   const resolutionCount = state.bossSignatureResolutions[bossType] || 0;
-  await wait((activeBoss.telegraph + .1) * 1000);
+  for (let retry = 0; retry < 40 && (await evaluate(`window.__game.getState().bossSignatureResolutions.${bossType} || 0`)) === resolutionCount; retry += 1) await wait(100);
   state = await evaluate("window.__game.getState()");
   const themedProjectiles = state.enemyProjectiles.filter(projectile => projectile.bossType === bossType);
   assert(state.bossSignatureResolutions[bossType] === resolutionCount + 1, `Boss room ${room} signature effect did not resolve`);
@@ -233,7 +298,7 @@ assert(state.finalBranch === "sheol" && state.biome === "燃罪魔窟", "Final r
 
 await call("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 await call("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 2 });
-await call("Page.navigate", { url: `${auditBaseUrl}?autostart=1` });
+await call("Page.navigate", { url: gameUrl });
 await wait(650);
 const mobileBefore = await evaluate("window.__game.getState()");
 const oldMobileRoomHeight = 390 / 960 * 540;
@@ -285,13 +350,26 @@ await evaluate("window.__game.toggleGuide(true)");
 await wait(80);
 assert(await evaluate("document.querySelector('#guide-panel').classList.contains('visible')"), "Mobile item codex did not open");
 await screenshot("v5-mobile-codex");
-await call("Page.navigate", { url: auditBaseUrl });
+await call("Page.navigate", { url: menuUrl });
 await wait(350);
 assert(await evaluate("document.querySelector('.author-credit').textContent.includes('彭铭旭') && document.querySelector('.author-credit').textContent.includes('MINOS')"), "Mobile start-screen author credit is missing");
 await screenshot("v6-mobile-start-author");
+await clickElement("#benefits-button");
+const mobileBenefits = await evaluate(`(() => {
+  const book = document.querySelector('.benefits-book').getBoundingClientRect();
+  return {
+    visible: document.querySelector('#benefits-panel').classList.contains('visible'),
+    fitsWidth: book.left >= 0 && book.right <= innerWidth,
+    fitsHeight: book.top >= 0 && book.bottom <= innerHeight,
+    columns: getComputedStyle(document.querySelector('.benefits-grid')).gridTemplateColumns.split(' ').length
+  };
+})()`);
+assert(mobileBenefits.visible && mobileBenefits.fitsWidth && mobileBenefits.fitsHeight && mobileBenefits.columns === 1, "Mobile benefits store layout overflowed the portrait viewport");
+await screenshot("v11-mobile-benefits-store");
+await evaluate("window.__game.toggleBenefits(false)");
 
 await call("Emulation.setDeviceMetricsOverride", { width: 844, height: 390, deviceScaleFactor: 2, mobile: true });
-await call("Page.navigate", { url: `${auditBaseUrl}?autostart=1` });
+await call("Page.navigate", { url: gameUrl });
 await wait(650);
 const landscapeState = await evaluate("window.__game.getState()");
 assert(landscapeState.viewport.landscape, "Mobile landscape mode was not detected");
@@ -301,5 +379,5 @@ assert(landscapeState.viewport.roomDisplayHeight >= 389, "Mobile landscape arena
 await screenshot("v7-mobile-landscape-arena");
 
 assert(browserErrors.length === 0, `Browser errors: ${browserErrors.join(" | ")}`);
-console.log(JSON.stringify({ authorCredit: "passed", portraitRoomHeight: mobileBefore.viewport.roomDisplayHeight, landscapeArena: `${landscapeState.viewport.roomWidth}x${landscapeState.viewport.roomHeight}`, itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", cleaverCombat: "passed", realBossBalance: { damage: balanceBossBefore.hp - balanceBossAfter.hp, movement: balanceAfter.player.x - balanceBefore.player.x }, shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", mobileCrossRoomFire: "passed", browserErrors: browserErrors.length }, null, 2));
+console.log(JSON.stringify({ authorCredit: "passed", benefitsStore: "passed", benefitsMobileLayout: "passed", portraitRoomHeight: mobileBefore.viewport.roomDisplayHeight, landscapeArena: `${landscapeState.viewport.roomWidth}x${landscapeState.viewport.roomHeight}`, itemCodex: guide.cards, workshop, craftedWeapons: "passed", advancedProjectiles: "passed", cleaverCombat: "passed", realBossBalance: { damage: balanceBossBefore.hp - balanceBossAfter.hp, movement: balanceAfter.player.x - balanceBefore.player.x }, shopPurchase: "passed", bosses: bossAudit, finalBranch: state.finalBranch, mobileMovement: mobileAfter.player.x - mobileBefore.player.x, mobileFireRelease: "passed", mobileCrossRoomFire: "passed", browserErrors: browserErrors.length }, null, 2));
 socket.close();

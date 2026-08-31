@@ -4,6 +4,9 @@ import { pathToFileURL } from "node:url";
 
 const port = process.env.CDP_PORT || "9333";
 const auditUrl = process.env.AUDIT_URL || pathToFileURL(path.resolve("index.html")).href;
+const gameUrl = new URL(auditUrl);
+gameUrl.searchParams.set("__audit", "1");
+gameUrl.searchParams.set("autostart", "1");
 const targets = await fetch(`http://127.0.0.1:${port}/json`).then(response => response.json());
 const page = targets.find(target => target.type === "page");
 if (!page) throw new Error("No Chrome page target");
@@ -50,7 +53,7 @@ await call("Page.enable");
 await call("Runtime.enable");
 await call("Log.enable");
 await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-await call("Page.navigate", { url: `${auditUrl}?autostart=1` });
+await call("Page.navigate", { url: gameUrl.href });
 for (let retry = 0; retry < 40 && !(await evaluate("Boolean(window.__game)").catch(() => false)); retry += 1) await wait(100);
 
 const heroes = ["breaker", "gambler", "seer", "titan"];

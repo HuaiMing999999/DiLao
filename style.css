@@ -61,7 +61,9 @@ body { touch-action: none; }
 #rotate-hint span { margin-top: 3px; color: #b6a995; font-size: 10px; }
 
 #guide-button,
-#workshop-button {
+#workshop-button,
+#benefits-button,
+#reroll-button {
   position: absolute;
   z-index: 6;
   top: 14px;
@@ -77,7 +79,12 @@ body { touch-action: none; }
 }
 
 #workshop-button { left: 16px; right: auto; border-color: #6f9b72; color: #dff2ce; }
-#guide-button:hover, #workshop-button:hover { border-color: #e3bd70; transform: translateY(-1px); }
+#benefits-button { left: 130px; right: auto; border-color: #c94843; color: #ffe3c1; background: linear-gradient(#5b2928eb, #251518eb); }
+#benefits-button span { color: #ffd46d; }
+#reroll-button { display: none; left: 50%; right: auto; transform: translateX(-50%); border-color: #b392dd; color: #eee2ff; background: linear-gradient(#4f3d69e8, #21192ce8); }
+#reroll-button.active { display: block; }
+#guide-button:hover, #workshop-button:hover, #benefits-button:hover { border-color: #e3bd70; transform: translateY(-1px); }
+#reroll-button:hover { transform: translateX(-50%) translateY(-1px); }
 
 .guide-panel {
   position: absolute;
@@ -104,6 +111,75 @@ body { touch-action: none; }
 }
 
 .workshop-panel.visible { display: grid; }
+
+.benefits-panel {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 34%, #4a2528e8, #090709f4 72%);
+  backdrop-filter: blur(7px);
+}
+
+.benefits-panel.visible { display: grid; }
+
+.benefits-book {
+  width: min(980px, calc(100vw - 36px));
+  max-height: min(820px, calc(100vh - 36px));
+  overflow: auto;
+  padding: 24px;
+  border: 3px solid #a6463f;
+  border-radius: 18px 12px 21px 14px;
+  color: #f0ddbd;
+  background: linear-gradient(145deg, #3a2022f7, #181316fa 56%, #2b1c18f7);
+  box-shadow: 0 24px 90px #000e, inset 0 0 0 2px #291214, inset 0 0 52px #0009;
+  touch-action: pan-y;
+}
+
+.benefits-header h2 { font-size: clamp(30px, 5vw, 52px); }
+.benefits-header button { white-space: nowrap; }
+.benefits-wallet { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 16px 0; padding: 14px 16px; border: 1px solid #865044; border-radius: 12px; background: linear-gradient(120deg, #361e20, #171316); }
+.benefits-wallet small, .benefits-wallet strong { display: block; }
+.benefits-wallet small { color: #b99d86; font-size: 10px; letter-spacing: .12em; }
+.benefits-wallet strong { margin-top: 4px; color: #ffd36e; font: 900 21px Georgia, "Songti SC", serif; }
+.benefits-wallet p { max-width: 520px; margin: 0; color: #bba997; font-size: 12px; line-height: 1.6; }
+.benefits-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.benefits-tabs button { padding: 9px 12px; border-color: #69433d; color: #bea99b; background: #1c1518; box-shadow: inset 0 1px #493135; font-size: 12px; }
+.benefits-tabs button.active { border-color: #e6ae57; color: #2b1715; background: linear-gradient(#f1c469, #ca6f3d); box-shadow: 0 3px 0 #74352d, inset 0 1px #fff0ae; }
+.benefits-notice { min-height: 0; overflow: hidden; border-radius: 8px; color: #f6d58b; background: #532f2399; text-align: center; font-size: 12px; transition: .2s; }
+.benefits-notice:not(:empty) { min-height: 36px; margin-bottom: 12px; padding: 9px 12px; border: 1px solid #9d6545; }
+.benefits-section-title { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 17px 0 9px; }
+.benefits-section-title h3 { margin: 0; color: #f0d196; font: 900 18px Georgia, "Songti SC", serif; }
+.benefits-section-title span { color: #9f8e82; font-size: 11px; }
+.benefits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.benefit-card { position: relative; min-height: 184px; padding: 15px; border: 1px solid #66473f; border-radius: 12px 9px 14px 8px; background: linear-gradient(150deg, #322326, #171316 70%); box-shadow: inset 0 1px #58393b, 0 8px 18px #0006; }
+.benefit-card.voucher { border-color: #a1443f; background: linear-gradient(150deg, #482528, #1c1417 70%); }
+.benefit-card.booster { border-color: #82734b; }
+.benefit-card.cosmetic { border-color: #6e588d; background: linear-gradient(150deg, #30243b, #17131b 70%); }
+.benefit-card.owned { border-color: #6fa075; box-shadow: inset 0 1px #70916c, 0 0 22px #66a36b22; }
+.benefit-card .benefit-icon { float: right; margin-left: 8px; color: #f4c260; font: 900 30px Georgia, serif; text-shadow: 0 0 14px #d75a4466; }
+.benefit-card .benefit-type { color: #d67a61; font-size: 9px; font-weight: 900; letter-spacing: .1em; }
+.benefit-card h3 { margin: 7px 0 5px; color: #f4dfba; font-size: 15px; }
+.benefit-card p { min-height: 48px; margin: 0 0 9px; color: #b7a69a; font-size: 11px; line-height: 1.5; }
+.benefit-card small { display: block; color: #8f8178; font-size: 10px; }
+.benefit-card button { width: 100%; margin-top: 11px; padding: 8px 10px; font-size: 11px; }
+.benefit-card button:disabled { cursor: default; filter: grayscale(.7); opacity: .55; transform: none; box-shadow: inset 0 1px #776a5c; }
+.benefit-price { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; color: #ffd36b; font-weight: 900; font-size: 12px; }
+.mission-grid { display: grid; gap: 10px; }
+.mission-card { display: grid; grid-template-columns: 1fr minmax(150px, .8fr) auto; align-items: center; gap: 14px; padding: 13px 15px; border: 1px solid #66473f; border-radius: 11px; background: #1b1518cc; }
+.mission-card h3 { margin: 0 0 4px; color: #f0d8b0; font-size: 14px; }
+.mission-card p { margin: 0; color: #a99789; font-size: 11px; }
+.mission-progress { height: 9px; overflow: hidden; border-radius: 9px; background: #0c0a0d; box-shadow: inset 0 1px 3px #000; }
+.mission-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #bd4a41, #f0b74f); box-shadow: 0 0 10px #e4894266; }
+.mission-card button { min-width: 112px; padding: 8px 10px; font-size: 11px; }
+.backpack-empty { padding: 42px 18px; border: 1px dashed #665149; border-radius: 12px; color: #9f8d81; text-align: center; }
+.benefits-disclaimer { margin: 18px 0 0; padding: 11px 13px; border-left: 3px solid #c64c43; color: #a9988c; background: #160f12aa; font-size: 10px; line-height: 1.6; }
+.benefits-disclaimer b { color: #e29a79; }
+.end-supply-progress { margin: -10px 0 18px; color: #e5bd69; font-weight: 800; }
+.end-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.secondary-button { border-color: #bd554b; color: #f3d8bd; background: linear-gradient(#68312f, #321b20); box-shadow: 0 5px 0 #531d23, 0 12px 28px #0009, inset 0 2px #a95b4c; }
 
 .workshop-book {
   width: min(900px, calc(100vw - 36px));
@@ -370,10 +446,17 @@ button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71382c; }
   #fullscreen-button { display: block; }
   #guide-button { top: 8px; right: 8px; padding: 7px 9px; font-size: 10px; }
   #workshop-button { top: 8px; left: 8px; padding: 7px 9px; font-size: 10px; }
+  #benefits-button { top: 8px; left: 102px; padding: 7px 9px; font-size: 10px; }
+  #reroll-button { top: 42px; padding: 7px 9px; font-size: 10px; }
   .guide-panel { padding: 10px; }
   .guide-book { width: calc(100vw - 20px); max-height: calc(100vh - 20px); padding: 16px; }
   .workshop-panel { padding: 10px; }
   .workshop-book { width: calc(100vw - 20px); max-height: calc(100vh - 20px); padding: 16px; }
+  .benefits-panel { padding: 10px; }
+  .benefits-book { width: calc(100vw - 20px); max-height: calc(100vh - 20px); padding: 15px; }
+  .benefits-wallet { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .benefits-grid { grid-template-columns: 1fr; }
+  .mission-card { grid-template-columns: 1fr; gap: 8px; }
   .farm-plots, .forge-recipes { grid-template-columns: 1fr; }
   .guide-summary, .guide-items { grid-template-columns: 1fr; }
   .guide-header h2 { font-size: 24px; }
@@ -394,12 +477,14 @@ button:active { transform: translateY(3px); box-shadow: 0 2px 0 #71382c; }
 
 @media (pointer: coarse) and (orientation: portrait) {
   #game-shell.playing #rotate-hint { display: block; }
+  #benefits-button { top: 42px; left: 8px; }
 }
 
 @media (pointer: coarse) and (orientation: landscape) {
   #fullscreen-button { top: max(5px, env(safe-area-inset-top)); padding: 5px 10px; opacity: .82; }
   #guide-button { top: max(5px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); }
   #workshop-button { top: max(5px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); }
+  #benefits-button { top: max(5px, env(safe-area-inset-top)); left: max(98px, calc(env(safe-area-inset-left) + 90px)); }
   #stick-zone { left: max(16px, calc(env(safe-area-inset-left) + 8px)); bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); width: 104px; height: 104px; }
   #stick-knob { left: 25px; top: 25px; }
   #fire-button { right: max(18px, calc(env(safe-area-inset-right) + 8px)); bottom: max(18px, calc(env(safe-area-inset-bottom) + 8px)); width: 76px; height: 76px; }

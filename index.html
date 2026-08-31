@@ -16,7 +16,9 @@
     <div id="rotate-hint" aria-hidden="true"><b>旋转手机横屏</b><span>进入 16:9 完整战场，视野和操作更舒适</span></div>
 
     <button id="workshop-button" type="button" aria-label="打开农场与锻造工坊">农场 · 工坊</button>
+    <button id="benefits-button" type="button" aria-label="打开京东权益商城">权益商城 · <span id="supply-balance-badge">0</span></button>
     <button id="guide-button" type="button" aria-label="打开遗物图鉴">I · 道具图鉴</button>
+    <button id="reroll-button" type="button" aria-label="刷新当前宝藏奖励">幸运刷新 · R</button>
 
     <section id="guide-panel" class="guide-panel" aria-hidden="true">
       <div class="guide-book">
@@ -48,6 +50,30 @@
         <h3 class="workshop-title">武器图纸</h3>
         <div id="forge-recipes" class="forge-recipes"></div>
         <p class="guide-footnote">击败敌人获得种子，Boss 会带来稀有图纸；种植后收获锻造材料。</p>
+      </div>
+    </section>
+
+    <section id="benefits-panel" class="benefits-panel" aria-hidden="true">
+      <div class="benefits-book">
+        <header class="guide-header benefits-header">
+          <div>
+            <div class="eyebrow">JD BENEFITS PROTOTYPE</div>
+            <h2>京东权益商城</h2>
+          </div>
+          <button id="benefits-close" type="button" aria-label="关闭权益商城">关闭 ×</button>
+        </header>
+        <div class="benefits-wallet">
+          <div><small>永久局外货币</small><strong>◈ <span id="benefits-balance">0</span> 补给币</strong></div>
+          <p>通过正常探索、Boss 战和每日悬赏获取；与局内弹壳币、农场材料完全独立。</p>
+        </div>
+        <nav class="benefits-tabs" aria-label="权益商城分类">
+          <button class="active" data-benefits-tab="store">权益商城</button>
+          <button data-benefits-tab="missions">每日悬赏</button>
+          <button data-benefits-tab="backpack">权益背包</button>
+        </nav>
+        <div id="benefits-notice" class="benefits-notice" aria-live="polite"></div>
+        <div id="benefits-content" class="benefits-content"></div>
+        <p class="benefits-disclaimer"><b>原型说明：</b>兑换凭证目前仅为游戏内活动测试道具，不是京豆、优惠券或真实兑换码，暂不可用于京东购物抵扣。未来接入正式权益时将以服务端活动规则为准。</p>
       </div>
     </section>
 
@@ -92,7 +118,11 @@
         <div class="eyebrow" id="end-kicker">RUN OVER</div>
         <h2 id="end-title">挑战结束</h2>
         <div id="end-stats"></div>
-        <button id="restart-button">再次叩门</button>
+        <p id="end-supply-progress" class="end-supply-progress"></p>
+        <div class="end-actions">
+          <button id="restart-button">再次叩门</button>
+          <button id="end-benefits-button" class="secondary-button">前往权益商城</button>
+        </div>
       </div>
     </section>
 
