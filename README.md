@@ -13,9 +13,9 @@
   <a href="#操作方式"><img src="https://img.shields.io/badge/Mobile-Landscape_Touch-719B72" alt="Mobile"></a>
 </p>
 
-### [▶ 在线试玩](https://mcp.edgeone.site/share/KhNqEgRtsJ2S-1vOlxBvn)
+### [▶ 在线试玩 · 最新线上版](https://mcp.edgeone.site/share/KhNqEgRtsJ2S-1vOlxBvn)
 
-无需安装、无需登录，打开网页即可游玩。
+当前线上版本：**权益商城版 · 2026-09-04**。无需安装、无需登录，打开网页即可游玩。
 
 </div>
 
