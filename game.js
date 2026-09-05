@@ -204,8 +204,6 @@
   let guideOpen = false;
   let workshopOpen = false;
   let benefitsOpen = false;
-  let hudOpen = false;
-  let treasureHover = null;
   let benefitsTab = "store";
   let benefitsMessage = "";
   let workshopRefreshTimer = 0;
@@ -2872,14 +2870,7 @@
         pickup.x += (game.player.x - pickup.x) / pickupDistance * pull * dt;
         pickup.y += (game.player.y - pickup.y) / pickupDistance * pull * dt;
       }
-      if (distance(pickup, game.player) > 28) {
-        if (pickup.choiceGroup === "treasure" && pickup === treasureHover) treasureHover = null;
-        continue;
-      }
-      if (pickup.choiceGroup === "treasure") {
-        treasureHover = pickup;
-        continue;
-      }
+      if (distance(pickup, game.player) > 28) continue;
       if (pickup.type === "chest") {
         pickup.type = "opening";
         pickup.openTimer = .55;
@@ -5362,25 +5353,11 @@
         if (pickup.shopItem) {
           context.fillStyle = affordable ? "#91dfaa" : "#ef7866";
           context.fillText(`◉ ${pickup.price} · ${affordable ? "靠近 / 点击购买" : `持有 ${game.player.coins}`}`, 0, 62);
-        } else if (pickup.choiceGroup === "treasure") {
-          if (pickup === treasureHover) {
-            context.fillStyle = "#f2c96d";
-            context.fillText("按 E 拾取 · 按 Esc 取消", 0, 62);
-          } else {
-            context.fillStyle = "#8fc69f";
-            context.fillText("靠近后按 E 拾取", 0, 62);
-          }
         } else {
           context.fillStyle = "#8fc69f";
           context.fillText("触碰后自动生效", 0, 62);
         }
-        if (pickup.choiceGroup === "treasure" && pickup === treasureHover) {
-          context.strokeStyle = "#f2c96d";
-          context.lineWidth = 2;
-          context.globalAlpha = .6 + Math.sin(pickup.phase * 1.6) * .3;
-          context.beginPath(); context.arc(0, -7, 34, 0, TAU); context.stroke();
-          context.globalAlpha = 1;
-        } else if (pickup.shopItem) {
+        if (pickup.shopItem) {
           context.strokeStyle = affordable ? "#79c995" : "#a94d49";
           context.lineWidth = 2;
           context.globalAlpha = .5 + Math.sin(pickup.phase * 1.4) * .12;
@@ -5537,16 +5514,8 @@
     context.fillStyle = "#c6aa72";
     context.font = "700 14px system-ui";
     context.fillText(`◉ ${player.coins}  ◆ ${player.armor}`, 220, 101);
-    if (!hudOpen) {
-      context.fillStyle = "#8f8273";
-      context.font = "700 10px system-ui";
-      context.fillText("按 Tab 查看属性", 70, 121);
-    }
     drawMinimap();
-    if (hudOpen) {
-      drawStats();
-      drawBuildTracks();
-    }
+    drawStats();
     drawBuildHud();
     drawItems();
     if (game.combo >= 2) {
@@ -5606,6 +5575,7 @@
     context.font = "700 11px system-ui";
     context.fillText(`攻击 ${player.damage.toFixed(1)}   射速 ${(1 / player.fireRate).toFixed(1)}/秒   移速 ${Math.round(player.speed)}`, 68, 151);
     context.fillText(`射程 ${Math.round(player.bulletLife * player.bulletSpeed)}   弹道 ${player.shots}   暴击 ${Math.round(player.critChance * 100)}%   穿透 ${player.pierce}`, 68, 171);
+    drawBuildTracks();
   }
 
   function drawBuildTracks() {
@@ -5770,22 +5740,6 @@
     if (code === "Escape" && workshopOpen) {
       event.preventDefault();
       setWorkshopOpen(false);
-      return;
-    }
-    if (code === "KeyE" && treasureHover) {
-      event.preventDefault();
-      collectPickup(treasureHover);
-      treasureHover = null;
-      return;
-    }
-    if (code === "Escape" && treasureHover) {
-      event.preventDefault();
-      treasureHover = null;
-      return;
-    }
-    if (code === "Tab") {
-      event.preventDefault();
-      hudOpen = !hudOpen;
       return;
     }
     if (code === "KeyI" || code === "Escape") {
@@ -6148,10 +6102,7 @@
     },
     collectPickups() {
       if (!game || game.state !== "playing") return;
-      game.pickups.forEach(pickup => {
-        if (pickup.choiceGroup === "treasure") collectPickup(pickup);
-        else { pickup.x = game.player.x; pickup.y = game.player.y; }
-      });
+      game.pickups.forEach(pickup => { pickup.x = game.player.x; pickup.y = game.player.y; });
     },
     setPlayerPosition(x, y) {
       if (!game || game.state !== "playing") return;
